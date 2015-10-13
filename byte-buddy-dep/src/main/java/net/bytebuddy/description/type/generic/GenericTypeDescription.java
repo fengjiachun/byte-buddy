@@ -8,9 +8,11 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.description.type.TypeRepresentation;
 import net.bytebuddy.dynamic.TargetType;
 import net.bytebuddy.implementation.bytecode.StackSize;
 import net.bytebuddy.matcher.ElementMatcher;
+import org.objectweb.asm.TypeReference;
 import org.objectweb.asm.signature.SignatureVisitor;
 
 import java.lang.reflect.*;
@@ -20,7 +22,7 @@ import java.util.*;
  * Represents a generic type of the Java programming language. A non-generic {@link TypeDescription} is considered to be
  * a specialization of a generic type.
  */
-public interface GenericTypeDescription extends NamedElement, Iterable<GenericTypeDescription> {
+public interface GenericTypeDescription extends TypeRepresentation, NamedElement {
 
     /**
      * Returns the sort of the generic type this instance represents.
@@ -30,82 +32,12 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
     Sort getSort();
 
     /**
-     * Returns the name of the type. For generic types, this name is their {@link Object#toString()} representations. For a non-generic
-     * type, it is the fully qualified binary name of the type.
-     *
-     * @return The name of this type.
-     */
-    String getTypeName();
-
-    /**
      * Returns the erasure of this type. Wildcard types ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#WILDCARD})
      * do not have a well-defined erasure and cause an {@link IllegalStateException} to be thrown.
      *
      * @return The erasure of this type.
      */
     TypeDescription asErasure();
-
-    /**
-     * <p>
-     * Returns the generic super type of this type.
-     * </p>
-     * <p>
-     * Only non-generic types ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#NON_GENERIC}) and parameterized types
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#PARAMETERIZED}) define a super type. For a generic array type,
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#GENERIC_ARRAY}), a description of {@link Object} is returned.
-     * For other generic types, an {@link IllegalStateException} is thrown.
-     * </p>
-     *
-     * @return The generic super type of this type or {@code null} if no such type exists.
-     */
-    GenericTypeDescription getSuperType();
-
-    /**
-     * <p>
-     * Returns the generic interface types of this type.
-     * </p>
-     * <p>
-     * Only non-generic types ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#NON_GENERIC}) and parameterized types
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#PARAMETERIZED}) define a super type. For a generic array type,
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#GENERIC_ARRAY}), a list of {@link java.io.Serializable} and
-     * {@link Cloneable}) is returned. For other generic types, an {@link IllegalStateException} is thrown.
-     * </p>
-     *
-     * @return The generic interface types of this type.
-     */
-    GenericTypeList getInterfaces();
-
-    /**
-     * <p>
-     * Returns a list of field descriptions that are declared by this type. For parameterized types, all type variables of these fields are
-     * resolved to the values of the type variables.
-     * </p>
-     * <p>
-     * Only non-generic types ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#NON_GENERIC}) and parameterized types
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#PARAMETERIZED}) define a super type. For a generic array type,
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#GENERIC_ARRAY}), an empty list is returned. For other generic
-     * types, an {@link IllegalStateException} is thrown.
-     * </p>
-     *
-     * @return A list of fields that are declared by this type.
-     */
-    FieldList<?> getDeclaredFields();
-
-    /**
-     * <p>
-     * Returns a list of method descriptions that are declared by this type. For parameterized types, all type variables used by these methods
-     * are resolved to the values of the type variables.
-     * </p>
-     * <p>
-     * Only non-generic types ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#NON_GENERIC}) and parameterized types
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#PARAMETERIZED}) define a super type. For a generic array type,
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#GENERIC_ARRAY}), an empty list is returned. For other
-     * generic types, an {@link IllegalStateException} is thrown.
-     * </p>
-     *
-     * @return A list of methods that are declared by this type.
-     */
-    MethodList<?> getDeclaredMethods();
 
     /**
      * <p>
@@ -1117,6 +1049,14 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         }
     }
 
+    abstract class AbstractBase implements GenericTypeDescription {
+
+        @Override
+        public GenericTypeDescription asGenericType() {
+            return this;
+        }
+    }
+
     /**
      * <p>
      * A raw type representation of a non-generic type. This raw type differs from a raw type in the Java programming language by
@@ -1127,7 +1067,7 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
      * All fields, methods, interfaces and the super type that are returned from this instance represent appropriately erased types.
      * </p>
      */
-    abstract class ForNonGenericType implements GenericTypeDescription {
+    abstract class ForNonGenericType extends AbstractBase {
 
         @Override
         public GenericTypeDescription getSuperType() {
@@ -1234,8 +1174,8 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         }
 
         @Override
-        public Iterator<GenericTypeDescription> iterator() {
-            return new SuperTypeIterator(this);
+        public Iterator<TypeRepresentation> iterator() {
+            return new TypeHierarchyIterator(this);
         }
 
         @Override
@@ -1309,7 +1249,7 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
      * A base implementation of a generic type description that represents a potentially generic array. Instances represent a non-generic type
      * if the given component type is non-generic.
      */
-    abstract class ForGenericArray implements GenericTypeDescription {
+    abstract class ForGenericArray extends AbstractBase {
 
         @Override
         public Sort getSort() {
@@ -1403,11 +1343,6 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         }
 
         @Override
-        public Iterator<GenericTypeDescription> iterator() {
-            return new SuperTypeIterator(this);
-        }
-
-        @Override
         public <T> T accept(Visitor<T> visitor) {
             return getSort().isNonGeneric()
                     ? visitor.onNonGenericType(this)
@@ -1417,6 +1352,11 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         @Override
         public StackSize getStackSize() {
             return StackSize.SINGLE;
+        }
+
+        @Override
+        public Iterator<TypeRepresentation> iterator() {
+            return new TypeHierarchyIterator(this);
         }
 
         @Override
@@ -1527,7 +1467,7 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
     /**
      * A base implementation of a generic type description that represents a wildcard type.
      */
-    abstract class ForWildcardType implements GenericTypeDescription {
+    abstract class ForWildcardType extends AbstractBase {
 
         /**
          * The source code representation of a wildcard.
@@ -1615,11 +1555,6 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         }
 
         @Override
-        public Iterator<GenericTypeDescription> iterator() {
-            throw new IllegalStateException("A wildcard does not imply a super type definition: " + this);
-        }
-
-        @Override
         public <T> T accept(Visitor<T> visitor) {
             return visitor.onWildcard(this);
         }
@@ -1627,6 +1562,11 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         @Override
         public StackSize getStackSize() {
             throw new IllegalStateException("A wildcard does not imply an operand stack size: " + this);
+        }
+
+        @Override
+        public Iterator<TypeRepresentation> iterator() {
+            throw new IllegalStateException("A wildcard does not imply a super type: " + this);
         }
 
         @Override
@@ -1766,7 +1706,7 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
     /**
      * A base implementation of a generic type description that represents a parameterized type.
      */
-    abstract class ForParameterizedType implements GenericTypeDescription {
+    abstract class ForParameterizedType extends AbstractBase {
 
         @Override
         public Sort getSort() {
@@ -1847,11 +1787,6 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         }
 
         @Override
-        public Iterator<GenericTypeDescription> iterator() {
-            return new SuperTypeIterator(this);
-        }
-
-        @Override
         public <T> T accept(Visitor<T> visitor) {
             return visitor.onParameterizedType(this);
         }
@@ -1859,6 +1794,11 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         @Override
         public StackSize getStackSize() {
             return StackSize.SINGLE;
+        }
+
+        @Override
+        public Iterator<TypeRepresentation> iterator() {
+            return new TypeHierarchyIterator(this);
         }
 
         @Override
@@ -2004,7 +1944,7 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
     /**
      * A base implementation of a generic type description that represents a type variable.
      */
-    abstract class ForTypeVariable implements GenericTypeDescription {
+    abstract class ForTypeVariable extends AbstractBase {
 
         @Override
         public Sort getSort() {
@@ -2095,8 +2035,8 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         }
 
         @Override
-        public Iterator<GenericTypeDescription> iterator() {
-            throw new IllegalStateException("A type variable does not imply a super type definition: " + this);
+        public Iterator<TypeRepresentation> iterator() {
+            throw new IllegalStateException("A type variable does not imply a super type: " + this);
         }
 
         @Override
@@ -2198,7 +2138,7 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
      * is meaningful as the Java virtual needs to process generic type information which requires extra ressources. Also, this allows
      * the extraction of non-generic type information even if the generic type information is invalid.
      */
-    abstract class LazyProjection implements GenericTypeDescription {
+    abstract class LazyProjection extends AbstractBase {
 
         /**
          * Resolves the actual generic type.
@@ -2301,9 +2241,8 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
         public boolean represents(Type type) {
             return resolve().represents(type);
         }
-
         @Override
-        public Iterator<GenericTypeDescription> iterator() {
+        public Iterator<TypeRepresentation> iterator() {
             return resolve().iterator();
         }
 
@@ -2676,55 +2615,6 @@ public interface GenericTypeDescription extends NamedElement, Iterable<GenericTy
                     return new TypeDescription.ForLoadedType(erasure);
                 }
             }
-        }
-    }
-
-    /**
-     * An iterator that iterates over a type's class hierarchy.
-     */
-    class SuperTypeIterator implements Iterator<GenericTypeDescription> {
-
-        /**
-         * The next type to represent.
-         */
-        private GenericTypeDescription nextType;
-
-        /**
-         * Creates a new iterator.
-         *
-         * @param initialType The initial type of this iterator.
-         */
-        public SuperTypeIterator(GenericTypeDescription initialType) {
-            nextType = initialType;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return nextType != null;
-        }
-
-        @Override
-        public GenericTypeDescription next() {
-            if (!hasNext()) {
-                throw new NoSuchElementException("End of type hierarchy");
-            }
-            try {
-                return nextType;
-            } finally {
-                nextType = nextType.getSuperType();
-            }
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException("remove");
-        }
-
-        @Override
-        public String toString() {
-            return "GenericTypeDescription.SuperTypeIterator{" +
-                    "nextType=" + nextType +
-                    '}';
         }
     }
 }

@@ -381,6 +381,11 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
+        public GenericTypeDescription asGenericType() {
+            return new ForNonGenericType.Latent(this);
+        }
+
+        @Override
         public GenericTypeList getUpperBounds() {
             throw new IllegalStateException("A non-generic type does not imply upper type bounds: " + this);
         }
@@ -660,8 +665,8 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public Iterator<GenericTypeDescription> iterator() {
-            return new SuperTypeIterator(this);
+        public Iterator<TypeRepresentation> iterator() {
+            return new TypeHierarchyIterator(this);
         }
 
         @Override

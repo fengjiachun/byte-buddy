@@ -7,6 +7,7 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeList;
+import net.bytebuddy.description.type.TypeRepresentation;
 import net.bytebuddy.description.type.generic.GenericTypeDescription;
 import net.bytebuddy.dynamic.scaffold.InstrumentedType;
 import net.bytebuddy.implementation.bytecode.*;
@@ -1226,8 +1227,8 @@ public class MethodCall implements Implementation {
              * @return The located field.
              */
             private FieldDescription locate(TypeDescription instrumentedType) {
-                for (GenericTypeDescription currentType : instrumentedType) {
-                    FieldList<?> fieldList = currentType.asErasure().getDeclaredFields().filter(named(fieldName).and(isVisibleTo(instrumentedType)));
+                for (TypeRepresentation currentType : instrumentedType) {
+                    FieldList<?> fieldList = currentType.getDeclaredFields().filter(named(fieldName).and(isVisibleTo(instrumentedType)));
                     if (fieldList.size() != 0) {
                         return fieldList.getOnly();
                     }

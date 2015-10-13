@@ -450,19 +450,19 @@ public abstract class AbstractTypeDescriptionTest extends AbstractGenericTypeDes
 
     @Test
     public void testHierarchyIteration() throws Exception {
-        Iterator<GenericTypeDescription> iterator = describe(Traversal.class).iterator();
+        Iterator<TypeRepresentation> iterator = describe(Traversal.class).iterator();
         assertThat(iterator.hasNext(), is(true));
-        assertThat(iterator.next(), is((GenericTypeDescription) new TypeDescription.ForLoadedType(Traversal.class)));
+        assertThat(iterator.next(), is((TypeRepresentation) new TypeDescription.ForLoadedType(Traversal.class)));
         assertThat(iterator.hasNext(), is(true));
-        assertThat(iterator.next(), is((GenericTypeDescription) TypeDescription.OBJECT));
+        assertThat(iterator.next(), is((TypeRepresentation) TypeDescription.OBJECT));
         assertThat(iterator.hasNext(), is(false));
     }
 
     @Test(expected = NoSuchElementException.class)
     public void testHierarchyEnds() throws Exception {
-        Iterator<GenericTypeDescription> iterator = describe(Object.class).iterator();
+        Iterator<TypeRepresentation> iterator = describe(Object.class).iterator();
         assertThat(iterator.hasNext(), is(true));
-        assertThat(iterator.next(), is((GenericTypeDescription) TypeDescription.OBJECT));
+        assertThat(iterator.next(), is((TypeRepresentation) TypeDescription.OBJECT));
         assertThat(iterator.hasNext(), is(false));
         iterator.next();
     }
@@ -486,11 +486,6 @@ public abstract class AbstractTypeDescriptionTest extends AbstractGenericTypeDes
         TypeDescription typeDescription = describe(SignatureMalformer.malform(MalformedBase.class));
         assertThat(typeDescription.getDeclaredMethods().filter(isMethod()).size(), is(1));
         typeDescription.getDeclaredMethods().filter(isMethod()).getOnly().getReturnType().getSort();
-    }
-
-    @Test
-    public void testObjectProperties() throws Exception {
-        ObjectPropertyAssertion.of(TypeDescription.AbstractBase.SuperTypeIterator.class).applyBasic();
     }
 
     protected interface SampleInterface {
