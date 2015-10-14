@@ -529,7 +529,7 @@ public interface MethodRegistry {
             return new Prepared(implementations,
                     instrumentedType.getLoadedTypeInitializer(),
                     instrumentedType.getTypeInitializer(),
-                    instrumentedType.asErasure(),
+                    instrumentedType,
                     methodGraph);
         }
 
