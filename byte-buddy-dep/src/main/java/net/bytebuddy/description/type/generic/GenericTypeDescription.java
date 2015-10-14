@@ -886,7 +886,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                 /**
                  * A type matcher for identifying the declaring type.
                  */
-                private final ElementMatcher<? super TypeDescription> typeMatcher;
+                private final ElementMatcher<? super GenericTypeDescription> typeMatcher;
 
                 /**
                  * A cache of detached type variables in order to resolve recursive types.
@@ -898,7 +898,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                  *
                  * @param typeMatcher A type matcher for identifying the declaring type.
                  */
-                public ForDetachment(ElementMatcher<? super TypeDescription> typeMatcher) {
+                public ForDetachment(ElementMatcher<? super GenericTypeDescription> typeMatcher) {
                     this.typeMatcher = typeMatcher;
                     detachedVariables = new HashMap<String, GenericTypeDescription>();
                 }
@@ -913,7 +913,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
                 @Override
                 protected GenericTypeDescription onSimpleType(GenericTypeDescription typeDescription) {
-                    return typeMatcher.matches(typeDescription.asErasure())
+                    return typeMatcher.matches(typeDescription)
                             ? TargetType.DESCRIPTION
                             : typeDescription;
                 }

@@ -43,13 +43,20 @@ public interface FieldDescription extends ByteCodeElement,
      */
     interface InDefinedShape extends FieldDescription, ByteCodeElement.Accessible {
 
-        @Override
-        TypeDescription getDeclaringType();
+        TypeDescription getDefiningType();
 
         /**
          * An abstract base implementation of a field description in its defined shape.
          */
         abstract class AbstractBase extends FieldDescription.AbstractBase implements InDefinedShape {
+
+            @Override
+            public GenericTypeDescription getDeclaringType() {
+                TypeDescription definingType = getDefiningType();
+                return definingType == null
+                        ? GenericTypeDescription.UNDEFINED
+                        : definingType.asGenericType();
+            }
 
             @Override
             public InDefinedShape asDefined() {
@@ -58,7 +65,7 @@ public interface FieldDescription extends ByteCodeElement,
 
             @Override
             public boolean isAccessibleTo(TypeDescription typeDescription) {
-                return isVisibleTo(typeDescription) && getDeclaringType().isVisibleTo(typeDescription);
+                return isVisibleTo(typeDescription) && getDefiningType().isVisibleTo(typeDescription);
             }
         }
     }
@@ -187,7 +194,7 @@ public interface FieldDescription extends ByteCodeElement,
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return new TypeDescription.ForLoadedType(field.getDeclaringClass());
         }
 
@@ -284,7 +291,7 @@ public interface FieldDescription extends ByteCodeElement,
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return declaringType;
         }
 
