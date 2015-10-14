@@ -244,8 +244,7 @@ public interface MethodDescription extends TypeVariableSource,
      */
     interface InDefinedShape extends MethodDescription, ByteCodeElement.Accessible {
 
-        @Override
-        TypeDescription getDeclaringType();
+        TypeDescription getDefiningType();
 
         @Override
         ParameterList<ParameterDescription.InDefinedShape> getParameters();
@@ -261,8 +260,16 @@ public interface MethodDescription extends TypeVariableSource,
             }
 
             @Override
+            public GenericTypeDescription getDeclaringType() {
+                TypeDescription definingType = getDefiningType();
+                return definingType == null
+                        ? GenericTypeDescription.UNDEFINED
+                        : definingType.asGenericType();
+            }
+
+            @Override
             public boolean isAccessibleTo(TypeDescription typeDescription) {
-                return isVisibleTo(typeDescription) && getDeclaringType().isVisibleTo(typeDescription);
+                return isVisibleTo(typeDescription) && getDefiningType().isVisibleTo(typeDescription);
             }
         }
     }
@@ -692,13 +699,13 @@ public interface MethodDescription extends TypeVariableSource,
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return new TypeDescription.ForLoadedType(constructor.getDeclaringClass());
         }
 
         @Override
         public GenericTypeDescription getReturnType() {
-            return TypeDescription.VOID;
+            return GenericTypeDescription.VOID;
         }
 
         @Override
@@ -792,7 +799,7 @@ public interface MethodDescription extends TypeVariableSource,
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return new TypeDescription.ForLoadedType(method.getDeclaringClass());
         }
 
@@ -1022,7 +1029,7 @@ public interface MethodDescription extends TypeVariableSource,
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return declaringType;
         }
 
@@ -1057,7 +1064,7 @@ public interface MethodDescription extends TypeVariableSource,
 
             @Override
             public GenericTypeDescription getReturnType() {
-                return TypeDescription.VOID;
+                return GenericTypeDescription.VOID;
             }
 
             @Override
@@ -1086,7 +1093,7 @@ public interface MethodDescription extends TypeVariableSource,
             }
 
             @Override
-            public TypeDescription getDeclaringType() {
+            public TypeDescription getDefiningType() {
                 return typeDescription;
             }
 
@@ -1214,7 +1221,7 @@ public interface MethodDescription extends TypeVariableSource,
                 return new GenericTypeDescription.ForParameterizedType.Latent(parameterizedType.asErasure(),
                         parameters,
                         ownerType == null
-                                ? TypeDescription.UNDEFINED
+                                ? GenericTypeDescription.UNDEFINED
                                 : ownerType.accept(this));
             }
 
