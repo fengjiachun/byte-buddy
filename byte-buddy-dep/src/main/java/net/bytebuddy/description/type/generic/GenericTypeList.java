@@ -5,6 +5,7 @@ import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeList;
+import net.bytebuddy.description.type.TypeRepresentation;
 import net.bytebuddy.matcher.FilterableList;
 
 import java.lang.reflect.Constructor;
@@ -145,6 +146,25 @@ public interface GenericTypeList extends FilterableList<GenericTypeDescription, 
         @Override
         public int size() {
             return types.size();
+        }
+    }
+
+    class ForTypeRepresentations extends AbstractBase {
+
+        private final List<? extends TypeRepresentation> typeRepresentations;
+
+        public ForTypeRepresentations(List<? extends TypeRepresentation> typeRepresentations) {
+            this.typeRepresentations = typeRepresentations;
+        }
+
+        @Override
+        public GenericTypeDescription get(int index) {
+            return typeRepresentations.get(index).asGenericType();
+        }
+
+        @Override
+        public int size() {
+            return typeRepresentations.size();
         }
     }
 
