@@ -488,7 +488,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                 List<GenericTypeDescription> parameters = new ArrayList<GenericTypeDescription>(parameterizedType.getParameters().size());
                 for (GenericTypeDescription parameter : parameterizedType.getParameters()) {
                     if (parameter.accept(PartialErasureReviser.INSTANCE)) {
-                        return parameterizedType.asErasure();
+                        return parameterizedType.asRawType();
                     }
                     parameters.add(parameter.accept(this));
                 }
@@ -496,13 +496,13 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                 return new GenericTypeDescription.ForParameterizedType.Latent(parameterizedType.asErasure(),
                         parameters,
                         ownerType == null
-                                ? TypeDescription.UNDEFINED
+                                ? GenericTypeDescription.UNDEFINED
                                 : ownerType.accept(this));
             }
 
             @Override
             public GenericTypeDescription onTypeVariable(GenericTypeDescription typeVariable) {
-                return typeVariable.asErasure();
+                return typeVariable.asRawType();
             }
 
             @Override
@@ -840,7 +840,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                 public GenericTypeDescription onTypeVariable(GenericTypeDescription genericTypeDescription) {
                     GenericTypeDescription typeVariable = typeVariableSource.findVariable(genericTypeDescription.getSymbol());
                     return typeVariable == null
-                            ? genericTypeDescription.asErasure()
+                            ? genericTypeDescription.asRawType()
                             : typeVariable;
                 }
 
@@ -1027,7 +1027,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                 public GenericTypeDescription onTypeVariable(GenericTypeDescription typeVariable) {
                     GenericTypeDescription substitution = bindings.get(typeVariable);
                     return substitution == null
-                            ? typeVariable.asErasure() // Fallback: Never happens for well-defined generic types.
+                            ? typeVariable.asRawType() // Fallback: Never happens for well-defined generic types.
                             : substitution;
                 }
 
@@ -1073,7 +1073,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public GenericTypeDescription asRawType() {
-            return asErasure().asRawType();
+            return asErasure().asGenericType();
         }
     }
 
@@ -1093,7 +1093,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
         public GenericTypeDescription getSuperType() {
             GenericTypeDescription superType = asErasure().getSuperType();
             return superType == null
-                    ? TypeDescription.UNDEFINED
+                    ? GenericTypeDescription.UNDEFINED
                     : superType.accept(Visitor.TypeVariableErasing.INSTANCE);
         }
 
@@ -1114,10 +1114,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public GenericTypeDescription getOwnerType() {
-            TypeDescription ownerType = asErasure().getOwnerType();
-            return ownerType == null
-                    ? TypeDescription.UNDEFINED
-                    : new ForNonGenericType.Latent(ownerType);
+            throw new IllegalStateException("A non-generic type does not imply an owner type: " + this);
         }
 
         @Override
@@ -1127,7 +1124,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public GenericTypeList getParameters() {
-            return asErasure().getParameters();
+            throw new IllegalStateException("A non-generic type does not imply parameter types: " + this);
         }
 
         @Override
@@ -1142,30 +1139,30 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public GenericTypeList getUpperBounds() {
-            return asErasure().getUpperBounds();
+            throw new IllegalStateException("A non-generic type does not imply an upper bounds: " + this);
         }
 
         @Override
         public GenericTypeList getLowerBounds() {
-            return asErasure().getLowerBounds();
+            throw new IllegalStateException("A non-generic type does not imply an lower bounds: " + this);
         }
 
         @Override
         public GenericTypeDescription getComponentType() {
             TypeDescription componentType = asErasure().getComponentType();
             return componentType == null
-                    ? TypeDescription.UNDEFINED
+                    ? GenericTypeDescription.UNDEFINED
                     : new ForNonGenericType.Latent(componentType);
         }
 
         @Override
         public TypeVariableSource getVariableSource() {
-            return asErasure().getVariableSource();
+            throw new IllegalStateException("A non-generic type does not imply a type variable source: " + this);
         }
 
         @Override
         public String getSymbol() {
-            return asErasure().getSymbol();
+            throw new IllegalStateException("A non-generic type does not imply a type symbol: " + this);
         }
 
         @Override
@@ -1190,7 +1187,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public boolean represents(Type type) {
-            return asErasure().represents(type);
+            return type instanceof Class && asErasure().represents((Class<?>) type);
         }
 
         @Override
@@ -1285,7 +1282,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public GenericTypeDescription getSuperType() {
-            return TypeDescription.OBJECT;
+            return GenericTypeDescription.OBJECT;
         }
 
         @Override
@@ -1325,7 +1322,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public GenericTypeDescription getOwnerType() {
-            return TypeDescription.UNDEFINED;
+            return GenericTypeDescription.UNDEFINED;
         }
 
         @Override
@@ -1688,7 +1685,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
              * @return A description of an unbounded wildcard.
              */
             public static GenericTypeDescription unbounded() {
-                return new Latent(Collections.singletonList(TypeDescription.OBJECT), Collections.<GenericTypeDescription>emptyList());
+                return new Latent(Collections.singletonList(GenericTypeDescription.OBJECT), Collections.<GenericTypeDescription>emptyList());
             }
 
             /**
@@ -1708,7 +1705,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
              * @return A wildcard with the given lower bound.
              */
             public static GenericTypeDescription boundedBelow(GenericTypeDescription lowerBound) {
-                return new Latent(Collections.singletonList(TypeDescription.OBJECT), Collections.singletonList(lowerBound));
+                return new Latent(Collections.singletonList(GenericTypeDescription.OBJECT), Collections.singletonList(lowerBound));
             }
 
             @Override
@@ -1737,7 +1734,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
         public GenericTypeDescription getSuperType() {
             GenericTypeDescription superType = asErasure().getSuperType();
             return superType == null
-                    ? TypeDescription.UNDEFINED
+                    ? GenericTypeDescription.UNDEFINED
                     : superType.accept(Visitor.Substitutor.ForTypeVariableBinding.bind(this));
         }
 
@@ -1901,7 +1898,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
             public GenericTypeDescription getOwnerType() {
                 Type ownerType = parameterizedType.getOwnerType();
                 return ownerType == null
-                        ? TypeDescription.UNDEFINED
+                        ? GenericTypeDescription.UNDEFINED
                         : Sort.describe(ownerType);
             }
 
@@ -2305,7 +2302,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
             protected GenericTypeDescription resolve() {
                 Type superClass = type.getGenericSuperclass();
                 return superClass == null
-                        ? TypeDescription.UNDEFINED
+                        ? GenericTypeDescription.UNDEFINED
                         : Sort.describe(superClass);
             }
 
