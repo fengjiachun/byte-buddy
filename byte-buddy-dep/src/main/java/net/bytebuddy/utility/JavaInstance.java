@@ -4,6 +4,7 @@ import net.bytebuddy.description.field.FieldDescription;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeList;
+import net.bytebuddy.description.type.generic.GenericTypeDescription;
 import net.bytebuddy.implementation.bytecode.StackManipulation;
 import net.bytebuddy.implementation.bytecode.constant.MethodHandleConstant;
 import net.bytebuddy.implementation.bytecode.constant.MethodTypeConstant;
@@ -23,7 +24,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static net.bytebuddy.utility.ByteBuddyCommons.isActualType;
 import static net.bytebuddy.utility.ByteBuddyCommons.nonNull;
 
 /**
@@ -51,7 +51,7 @@ public interface JavaInstance {
      *
      * @return A description of the type of the represented instance or at least a stub.
      */
-    TypeDescription getInstanceType();
+    GenericTypeDescription getInstanceType();
 
     /**
      * Represents a {@code java.lang.invoke.MethodType} object.
@@ -268,8 +268,8 @@ public interface JavaInstance {
         }
 
         @Override
-        public TypeDescription getInstanceType() {
-            return JavaType.METHOD_TYPE.getTypeStub();
+        public GenericTypeDescription getInstanceType() {
+            return JavaType.METHOD_TYPE.getTypeStub().asGenericType();
         }
 
         @Override
@@ -703,8 +703,8 @@ public interface JavaInstance {
         }
 
         @Override
-        public TypeDescription getInstanceType() {
-            return JavaType.METHOD_HANDLE.getTypeStub();
+        public GenericTypeDescription getInstanceType() {
+            return JavaType.METHOD_HANDLE.getTypeStub().asGenericType();
         }
 
         /**

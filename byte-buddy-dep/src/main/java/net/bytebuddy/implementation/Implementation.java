@@ -744,7 +744,7 @@ public interface Implementation {
 
                 @Override
                 public GenericTypeDescription getType() {
-                    return fieldType;
+                    return fieldType.asGenericType();
                 }
 
                 @Override
@@ -753,7 +753,7 @@ public interface Implementation {
                 }
 
                 @Override
-                public TypeDescription getDeclaringType() {
+                public TypeDescription getDefiningType() {
                     return instrumentedType;
                 }
 
@@ -854,7 +854,7 @@ public interface Implementation {
 
                 @Override
                 public int getModifiers() {
-                    return Opcodes.ACC_SYNTHETIC | getBaseModifiers() | (getDeclaringType().isClassType()
+                    return Opcodes.ACC_SYNTHETIC | getBaseModifiers() | (getDefiningType().isClassType()
                             ? Opcodes.ACC_FINAL
                             : Opcodes.ACC_PUBLIC);
                 }
@@ -902,12 +902,12 @@ public interface Implementation {
 
                 @Override
                 public GenericTypeDescription getReturnType() {
-                    return methodDescription.getReturnType().asErasure();
+                    return methodDescription.getReturnType().asRawType();
                 }
 
                 @Override
                 public ParameterList<ParameterDescription.InDefinedShape> getParameters() {
-                    return new ParameterList.Explicit.ForTypes(this, methodDescription.getParameters().asTypeList().asErasures());
+                    return new ParameterList.Explicit.ForTypes(this, methodDescription.getParameters().asTypeList().asRawTypes());
                 }
 
                 @Override
@@ -931,7 +931,7 @@ public interface Implementation {
                 }
 
                 @Override
-                public TypeDescription getDeclaringType() {
+                public TypeDescription getDefiningType() {
                     return instrumentedType;
                 }
 
@@ -983,7 +983,7 @@ public interface Implementation {
 
                 @Override
                 public GenericTypeDescription getReturnType() {
-                    return fieldDescription.getType().asErasure();
+                    return fieldDescription.getType().asRawType();
                 }
 
                 @Override
@@ -1012,7 +1012,7 @@ public interface Implementation {
                 }
 
                 @Override
-                public TypeDescription getDeclaringType() {
+                public TypeDescription getDefiningType() {
                     return instrumentedType;
                 }
 
@@ -1064,12 +1064,12 @@ public interface Implementation {
 
                 @Override
                 public GenericTypeDescription getReturnType() {
-                    return TypeDescription.VOID;
+                    return GenericTypeDescription.VOID;
                 }
 
                 @Override
                 public ParameterList<ParameterDescription.InDefinedShape> getParameters() {
-                    return new ParameterList.Explicit.ForTypes(this, Collections.singletonList(fieldDescription.getType().asErasure()));
+                    return new ParameterList.Explicit.ForTypes(this, Collections.singletonList(fieldDescription.getType().asRawType()));
                 }
 
                 @Override
@@ -1093,7 +1093,7 @@ public interface Implementation {
                 }
 
                 @Override
-                public TypeDescription getDeclaringType() {
+                public TypeDescription getDefiningType() {
                     return instrumentedType;
                 }
 

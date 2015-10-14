@@ -485,19 +485,19 @@ public interface InstrumentedType extends TypeDescription {
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return declaringType;
         }
 
         @Override
-        protected GenericTypeDescription getDeclaredSuperType() {
+        public GenericTypeDescription getSuperType() {
             return superType == null
-                    ? TypeDescription.UNDEFINED
+                    ? GenericTypeDescription.UNDEFINED
                     : superType.accept(GenericTypeDescription.Visitor.Substitutor.ForAttachment.of(this));
         }
 
         @Override
-        protected GenericTypeList getDeclaredInterfaces() {
+        public GenericTypeList getInterfaces() {
             return GenericTypeList.ForDetachedTypes.attach(this, interfaceTypes);
         }
 

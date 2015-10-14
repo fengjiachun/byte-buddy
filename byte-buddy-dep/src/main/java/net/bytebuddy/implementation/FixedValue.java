@@ -3,6 +3,7 @@ package net.bytebuddy.implementation;
 import net.bytebuddy.description.field.FieldDescription;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.description.type.generic.GenericTypeDescription;
 import net.bytebuddy.dynamic.scaffold.InstrumentedType;
 import net.bytebuddy.implementation.bytecode.ByteCodeAppender;
 import net.bytebuddy.implementation.bytecode.StackManipulation;
@@ -86,69 +87,69 @@ public abstract class FixedValue implements Implementation {
     public static AssignerConfigurable value(Object fixedValue) {
         if (fixedValue == null) {
             return new ForPoolValue(NullConstant.INSTANCE,
-                    TypeDescription.OBJECT,
+                    GenericTypeDescription.OBJECT,
                     Assigner.DEFAULT,
                     Assigner.Typing.DYNAMIC);
         }
         Class<?> type = fixedValue.getClass();
         if (type == String.class) {
             return new ForPoolValue(new TextConstant((String) fixedValue),
-                    TypeDescription.STRING,
+                    GenericTypeDescription.STRING,
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Class.class) {
             return new ForPoolValue(ClassConstant.of(new TypeDescription.ForLoadedType((Class<?>) fixedValue)),
-                    TypeDescription.CLASS,
+                    GenericTypeDescription.CLASS,
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Boolean.class) {
             return new ForPoolValue(IntegerConstant.forValue((Boolean) fixedValue),
-                    new TypeDescription.ForLoadedType(boolean.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(boolean.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Byte.class) {
             return new ForPoolValue(IntegerConstant.forValue((Byte) fixedValue),
-                    new TypeDescription.ForLoadedType(byte.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(byte.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Short.class) {
             return new ForPoolValue(IntegerConstant.forValue((Short) fixedValue),
-                    new TypeDescription.ForLoadedType(short.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(short.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Character.class) {
             return new ForPoolValue(IntegerConstant.forValue((Character) fixedValue),
-                    new TypeDescription.ForLoadedType(char.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(char.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Integer.class) {
             return new ForPoolValue(IntegerConstant.forValue((Integer) fixedValue),
-                    new TypeDescription.ForLoadedType(int.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(int.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Long.class) {
             return new ForPoolValue(LongConstant.forValue((Long) fixedValue),
-                    new TypeDescription.ForLoadedType(long.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(long.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Float.class) {
             return new ForPoolValue(FloatConstant.forValue((Float) fixedValue),
-                    new TypeDescription.ForLoadedType(float.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(float.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (type == Double.class) {
             return new ForPoolValue(DoubleConstant.forValue((Double) fixedValue),
-                    new TypeDescription.ForLoadedType(double.class),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(double.class),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (JavaType.METHOD_HANDLE.getTypeStub().isAssignableFrom(type)) {
             return new ForPoolValue(MethodHandleConstant.of(JavaInstance.MethodHandle.of(fixedValue)),
-                    new TypeDescription.ForLoadedType(type),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(type),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else if (JavaType.METHOD_TYPE.getTypeStub().represents(type)) {
             return new ForPoolValue(MethodTypeConstant.of(JavaInstance.MethodType.of(fixedValue)),
-                    new TypeDescription.ForLoadedType(type),
+                    new GenericTypeDescription.ForNonGenericType.OfLoadedType(type),
                     Assigner.DEFAULT,
                     Assigner.Typing.STATIC);
         } else {
@@ -170,7 +171,7 @@ public abstract class FixedValue implements Implementation {
      */
     public static AssignerConfigurable reference(Object fixedValue) {
         return fixedValue == null
-                ? new ForPoolValue(NullConstant.INSTANCE, TypeDescription.OBJECT, Assigner.DEFAULT, Assigner.Typing.DYNAMIC)
+                ? new ForPoolValue(NullConstant.INSTANCE, GenericTypeDescription.OBJECT, Assigner.DEFAULT, Assigner.Typing.DYNAMIC)
                 : new ForStaticField(fixedValue, Assigner.DEFAULT, Assigner.Typing.STATIC);
     }
 
@@ -201,7 +202,7 @@ public abstract class FixedValue implements Implementation {
      */
     public static AssignerConfigurable value(TypeDescription fixedValue) {
         return new ForPoolValue(ClassConstant.of(fixedValue),
-                TypeDescription.CLASS,
+                GenericTypeDescription.CLASS,
                 Assigner.DEFAULT,
                 Assigner.Typing.STATIC);
     }
@@ -234,9 +235,9 @@ public abstract class FixedValue implements Implementation {
     protected ByteCodeAppender.Size apply(MethodVisitor methodVisitor,
                                           Context implementationContext,
                                           MethodDescription instrumentedMethod,
-                                          TypeDescription fixedValueType,
+                                          GenericTypeDescription fixedValueType,
                                           StackManipulation valueLoadingInstruction) {
-        StackManipulation assignment = assigner.assign(fixedValueType, instrumentedMethod.getReturnType().asErasure(), typing);
+        StackManipulation assignment = assigner.assign(fixedValueType.asErasure(), instrumentedMethod.getReturnType().asErasure(), typing);
         if (!assignment.isValid()) {
             throw new IllegalArgumentException("Cannot return value of type " + fixedValueType + " for " + instrumentedMethod);
         }
@@ -291,7 +292,7 @@ public abstract class FixedValue implements Implementation {
         /**
          * The type of the fixed value.
          */
-        private final TypeDescription loadedType;
+        private final GenericTypeDescription loadedType;
 
         /**
          * Creates a new constant pool fixed value implementation.
@@ -303,7 +304,7 @@ public abstract class FixedValue implements Implementation {
          *                             instrumented value.
          * @param typing               Indicates if dynamic type castings should be attempted for incompatible assignments.
          */
-        private ForPoolValue(StackManipulation valueLoadInstruction, TypeDescription loadedType, Assigner assigner, Assigner.Typing typing) {
+        private ForPoolValue(StackManipulation valueLoadInstruction, GenericTypeDescription loadedType, Assigner assigner, Assigner.Typing typing) {
             super(assigner, typing);
             this.valueLoadInstruction = valueLoadInstruction;
             this.loadedType = loadedType;
@@ -379,7 +380,7 @@ public abstract class FixedValue implements Implementation {
         /**
          * The type if the field for storing the fixed value.
          */
-        private final TypeDescription fieldType;
+        private final GenericTypeDescription fieldType;
 
         /**
          * Creates a new static field fixed value implementation with a random name for the field containing the fixed
@@ -407,7 +408,7 @@ public abstract class FixedValue implements Implementation {
             super(assigner, typing);
             this.fieldName = fieldName;
             this.fixedValue = fixedValue;
-            fieldType = new TypeDescription.ForLoadedType(fixedValue.getClass());
+            fieldType = new GenericTypeDescription.ForNonGenericType.OfLoadedType(fixedValue.getClass());
         }
 
         @Override

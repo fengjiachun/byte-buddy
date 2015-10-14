@@ -877,7 +877,7 @@ public interface TypeWriter<T> {
                         }
 
                         @Override
-                        public TypeDescription getDeclaringType() {
+                        public TypeDescription getDefiningType() {
                             return instrumentedType;
                         }
 
@@ -1112,7 +1112,7 @@ public interface TypeWriter<T> {
                     }
 
                     @Override
-                    public TypeDescription getDeclaringType() {
+                    public TypeDescription getDefiningType() {
                         return instrumentedType;
                     }
 
@@ -1184,7 +1184,7 @@ public interface TypeWriter<T> {
                     }
 
                     @Override
-                    public TypeDescription getDeclaringType() {
+                    public TypeDescription getDefiningType() {
                         return instrumentedType;
                     }
 
@@ -2401,7 +2401,7 @@ public interface TypeWriter<T> {
                 }
 
                 @Override
-                public TypeDescription getDeclaringType() {
+                public TypeDescription getDefiningType() {
                     return instrumentedType;
                 }
 
@@ -2412,7 +2412,7 @@ public interface TypeWriter<T> {
 
                 @Override
                 public GenericTypeDescription getReturnType() {
-                    return TypeDescription.VOID;
+                    return GenericTypeDescription.VOID;
                 }
 
                 @Override

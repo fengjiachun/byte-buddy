@@ -374,12 +374,12 @@ public interface MethodRebaseResolver {
 
                 @Override
                 public GenericTypeDescription getReturnType() {
-                    return methodDescription.getReturnType().asErasure();
+                    return methodDescription.getReturnType().asRawType();
                 }
 
                 @Override
                 public ParameterList<ParameterDescription.InDefinedShape> getParameters() {
-                    return new ParameterList.Explicit.ForTypes(this, methodDescription.getParameters().asTypeList().asErasures());
+                    return new ParameterList.Explicit.ForTypes(this, methodDescription.getParameters().asTypeList().asRawTypes());
                 }
 
                 @Override
@@ -403,8 +403,8 @@ public interface MethodRebaseResolver {
                 }
 
                 @Override
-                public TypeDescription getDeclaringType() {
-                    return methodDescription.getDeclaringType();
+                public TypeDescription getDefiningType() {
+                    return methodDescription.getDefiningType();
                 }
 
                 @Override
@@ -412,7 +412,7 @@ public interface MethodRebaseResolver {
                     return Opcodes.ACC_SYNTHETIC
                             | (methodDescription.isStatic() ? Opcodes.ACC_STATIC : EMPTY_MASK)
                             | (methodDescription.isNative() ? Opcodes.ACC_NATIVE : EMPTY_MASK)
-                            | (methodDescription.getDeclaringType().isClassType() ? Opcodes.ACC_PRIVATE : Opcodes.ACC_PUBLIC);
+                            | (methodDescription.getDefiningType().isClassType() ? Opcodes.ACC_PRIVATE : Opcodes.ACC_PUBLIC);
                 }
 
                 @Override
@@ -511,7 +511,7 @@ public interface MethodRebaseResolver {
 
                 @Override
                 public GenericTypeDescription getReturnType() {
-                    return TypeDescription.VOID;
+                    return GenericTypeDescription.VOID;
                 }
 
                 @Override
@@ -540,8 +540,8 @@ public interface MethodRebaseResolver {
                 }
 
                 @Override
-                public TypeDescription getDeclaringType() {
-                    return methodDescription.getDeclaringType();
+                public TypeDescription getDefiningType() {
+                    return methodDescription.getDefiningType();
                 }
 
                 @Override

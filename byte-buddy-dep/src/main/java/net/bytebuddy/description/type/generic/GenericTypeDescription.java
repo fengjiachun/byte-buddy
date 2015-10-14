@@ -1288,7 +1288,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
 
         @Override
         public GenericTypeList getInterfaces() {
-            return TypeDescription.ARRAY_INTERFACES;
+            return GenericTypeDescription.ARRAY_INTERFACES;
         }
 
         @Override
