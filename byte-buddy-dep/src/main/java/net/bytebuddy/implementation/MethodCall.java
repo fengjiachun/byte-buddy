@@ -758,7 +758,7 @@ public class MethodCall implements Implementation {
 
             @Override
             public InstrumentedType prepare(InstrumentedType instrumentedType) {
-                if (!instrumentedType.isClassType()) {
+                if (instrumentedType.isInterface()) {
                     throw new IllegalStateException("Cannot define non-static field '" + fieldName + "' on " + instrumentedType);
                 }
                 return instrumentedType.withField(new FieldDescription.Token(fieldName, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_PUBLIC, fieldType));
@@ -1149,7 +1149,7 @@ public class MethodCall implements Implementation {
 
             @Override
             public InstrumentedType prepare(InstrumentedType instrumentedType) {
-                if (!instrumentedType.isClassType()) {
+                if (instrumentedType.isInterface()) {
                     throw new IllegalStateException("Cannot define non-static field '" + fieldName + "' for " + instrumentedType);
                 }
                 return instrumentedType.withField(new FieldDescription.Token(fieldName, Opcodes.ACC_SYNTHETIC | Opcodes.ACC_PUBLIC, fieldType));

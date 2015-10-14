@@ -4147,7 +4147,10 @@ public interface TypePool {
 
                         @Override
                         public GenericTypeList resolveExceptionTypes(List<String> exceptionTypeDescriptors, TypePool typePool, MethodDescription definingMethod) {
-                            return new TokenizedGenericType.TokenList(typePool, exceptionTypeTokens, exceptionTypeDescriptors, definingMethod);
+                            // Generic signatures of methods are optional.
+                            return exceptionTypeTokens.isEmpty()
+                                    ? new LazyTypeList(typePool, exceptionTypeDescriptors).asGenericTypes()
+                                    : new TokenizedGenericType.TokenList(typePool, exceptionTypeTokens, exceptionTypeDescriptors, definingMethod);
                         }
 
                         @Override
