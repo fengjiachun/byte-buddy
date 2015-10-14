@@ -4,6 +4,7 @@ import net.bytebuddy.description.field.FieldList;
 import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.type.generic.GenericTypeDescription;
 import net.bytebuddy.description.type.generic.GenericTypeList;
+import net.bytebuddy.implementation.bytecode.StackSize;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -79,6 +80,29 @@ public interface TypeRepresentation extends Iterable<TypeRepresentation> {
      * @return A list of methods that are declared by this type.
      */
     MethodList<?> getDeclaredMethods();
+
+    /**
+     * Returns the size of the type described by this instance. Wildcard types
+     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#WILDCARD} do not have a well-defined a stack size and
+     * cause an {@link IllegalStateException} to be thrown.
+     *
+     * @return The size of the type described by this instance.
+     */
+    StackSize getStackSize();
+
+    /**
+     * Checks if the type described by this entity is an array.
+     *
+     * @return {@code true} if this type description represents an array.
+     */
+    boolean isArray();
+
+    /**
+     * Checks if the type described by this entity is a primitive type.
+     *
+     * @return {@code true} if this type description represents a primitive type.
+     */
+    boolean isPrimitive();
 
     GenericTypeDescription asGenericType();
 

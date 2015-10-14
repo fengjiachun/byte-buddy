@@ -22,7 +22,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.GenericSignatureFormatError;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.utility.ByteBuddyCommons.join;
@@ -31,7 +34,7 @@ import static net.bytebuddy.utility.ByteBuddyCommons.join;
  * Implementations of this interface represent a Java type, i.e. a class or interface. Instances of this interface always
  * represent non-generic types of sort {@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#NON_GENERIC}.
  */
-public interface TypeDescription extends GenericTypeDescription, TypeVariableSource {
+public interface TypeDescription extends TypeRepresentation, TypeVariableSource {
 
     /**
      * A representation of the {@link java.lang.Object} type.
@@ -143,14 +146,11 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
      */
     boolean isAssignableTo(TypeDescription typeDescription);
 
-    @Override
+    boolean represents(Class<?> type);
+
     TypeDescription getComponentType();
 
-    @Override
-    TypeDescription getOwnerType();
-
-    @Override
-    TypeDescription getDeclaringType();
+    TypeDescription getDefiningType();
 
     /**
      * Returns a description of the enclosing method of this type.
@@ -282,33 +282,6 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
      */
     abstract class AbstractBase extends ModifierReviewable.AbstractBase implements TypeDescription {
 
-        @Override
-        public GenericTypeDescription getSuperType() {
-            GenericTypeDescription superType = getDeclaredSuperType();
-            return superType == null
-                    ? TypeDescription.UNDEFINED
-                    : superType.accept(RawTypeWrapper.INSTANCE);
-        }
-
-        /**
-         * Returns the declared super type in the form it is declared in the class file.
-         *
-         * @return The declared super type.
-         */
-        protected abstract GenericTypeDescription getDeclaredSuperType();
-
-        @Override
-        public GenericTypeList getInterfaces() {
-            return new GenericTypeList.ForDetachedTypes(getDeclaredInterfaces(), RawTypeWrapper.INSTANCE);
-        }
-
-        /**
-         * Returns the declared interface types in the form they are declared in the class file.
-         *
-         * @return The declared super type.
-         */
-        protected abstract GenericTypeList getDeclaredInterfaces();
-
         /**
          * Checks if a specific type is assignable to another type where the source type must be a super
          * type of the target type.
@@ -371,46 +344,8 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public Sort getSort() {
-            return Sort.NON_GENERIC;
-        }
-
-        @Override
-        public TypeDescription asErasure() {
-            return this;
-        }
-
-        @Override
         public GenericTypeDescription asGenericType() {
-            return new ForNonGenericType.Latent(this);
-        }
-
-        @Override
-        public GenericTypeList getUpperBounds() {
-            throw new IllegalStateException("A non-generic type does not imply upper type bounds: " + this);
-        }
-
-        @Override
-        public GenericTypeList getLowerBounds() {
-            throw new IllegalStateException("A non-generic type does not imply lower type bounds: " + this);
-        }
-
-        @Override
-        public GenericTypeList getParameters() {
-            return new GenericTypeList.Empty();
-        }
-
-        @Override
-        public String getSymbol() {
-            throw new IllegalStateException("A non-generic type does not imply a symbol: " + this);
-        }
-
-        @Override
-        public TypeDescription getOwnerType() {
-            MethodDescription enclosingMethod = getEnclosingMethod();
-            return enclosingMethod == null
-                    ? getEnclosingType()
-                    : enclosingMethod.getDeclaringType().asErasure();
+            return new GenericTypeDescription.ForNonGenericType.Latent(this);
         }
 
         @Override
@@ -526,11 +461,6 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public TypeVariableSource getVariableSource() {
-            return UNDEFINED;
-        }
-
-        @Override
         public boolean isSamePackage(TypeDescription typeDescription) {
             PackageDescription thisPackage = getPackage(), otherPackage = typeDescription.getPackage();
             return thisPackage == null || otherPackage == null
@@ -624,13 +554,21 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public boolean represents(java.lang.reflect.Type type) {
-            return equals(Sort.describe(type));
+        public boolean represents(Class<?> type) {
+            return equals(new ForLoadedType(type));
         }
 
         @Override
         public String getTypeName() {
             return getName();
+        }
+
+        @Override
+        public GenericTypeDescription getDeclaringType() {
+            TypeDescription definingType = getDefiningType();
+            return definingType == null
+                    ? GenericTypeDescription.UNDEFINED
+                    : definingType.asGenericType();
         }
 
         @Override
@@ -647,7 +585,7 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
             if (typeVariables.isEmpty()) {
                 TypeVariableSource enclosingSource = getEnclosingSource();
                 return enclosingSource == null
-                        ? UNDEFINED
+                        ? GenericTypeDescription.UNDEFINED
                         : enclosingSource.findVariable(symbol);
             } else {
                 return typeVariables.getOnly();
@@ -660,18 +598,8 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public <T> T accept(GenericTypeDescription.Visitor<T> visitor) {
-            return visitor.onNonGenericType(this);
-        }
-
-        @Override
         public Iterator<TypeRepresentation> iterator() {
             return new TypeHierarchyIterator(this);
-        }
-
-        @Override
-        public GenericTypeDescription asRawType() {
-            return new ForNonGenericType.Latent(this);
         }
 
         @Override
@@ -689,95 +617,6 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         @Override
         public String toString() {
             return (isPrimitive() ? "" : (isInterface() ? "interface" : "class") + " ") + getName();
-        }
-
-        /**
-         * A visitor that represents all {@link TypeDescription} instances as raw generic types.
-         */
-        protected enum RawTypeWrapper implements GenericTypeDescription.Visitor<GenericTypeDescription> {
-
-            /**
-             * The singleton instance.
-             */
-            INSTANCE;
-
-            @Override
-            public GenericTypeDescription onGenericArray(GenericTypeDescription genericArray) {
-                return ForGenericArray.Latent.of(genericArray.getComponentType().accept(this), 1);
-            }
-
-            @Override
-            public GenericTypeDescription onWildcard(GenericTypeDescription wildcard) {
-                // Wildcards which are used within parameterized types are taken care of by the calling method.
-                GenericTypeList lowerBounds = wildcard.getLowerBounds();
-                return lowerBounds.isEmpty()
-                        ? GenericTypeDescription.ForWildcardType.Latent.boundedAbove(wildcard.getUpperBounds().getOnly().accept(this))
-                        : GenericTypeDescription.ForWildcardType.Latent.boundedBelow(lowerBounds.getOnly().accept(this));
-            }
-
-            @Override
-            public GenericTypeDescription onParameterizedType(GenericTypeDescription parameterizedType) {
-                List<GenericTypeDescription> parameters = new ArrayList<GenericTypeDescription>(parameterizedType.getParameters().size());
-                for (GenericTypeDescription parameter : parameterizedType.getParameters()) {
-                    parameters.add(parameter.accept(this));
-                }
-                GenericTypeDescription ownerType = parameterizedType.getOwnerType();
-                return new GenericTypeDescription.ForParameterizedType.Latent(parameterizedType.asErasure(),
-                        parameters,
-                        ownerType == null
-                                ? TypeDescription.UNDEFINED
-                                : ownerType.accept(this));
-            }
-
-            @Override
-            public GenericTypeDescription onTypeVariable(GenericTypeDescription typeVariable) {
-                return new RawTypeVariable(typeVariable);
-            }
-
-            @Override
-            public GenericTypeDescription onNonGenericType(GenericTypeDescription typeDescription) {
-                return new ForNonGenericType.Latent(typeDescription.asErasure());
-            }
-
-            @Override
-            public String toString() {
-                return "TypeDescription.AbstractBase.RawTypeWrapper." + name();
-            }
-
-            /**
-             * An representation of a type variable with raw type bounds.
-             */
-            protected static class RawTypeVariable extends ForTypeVariable {
-
-                /**
-                 * The type variable in its declared form.
-                 */
-                private final GenericTypeDescription typeVariable;
-
-                /**
-                 * Creates a new raw type representation of a type variable.
-                 *
-                 * @param typeVariable The type variable in its declared form.
-                 */
-                protected RawTypeVariable(GenericTypeDescription typeVariable) {
-                    this.typeVariable = typeVariable;
-                }
-
-                @Override
-                public GenericTypeList getUpperBounds() {
-                    return new GenericTypeList.ForDetachedTypes(typeVariable.getUpperBounds(), RawTypeWrapper.INSTANCE);
-                }
-
-                @Override
-                public TypeVariableSource getVariableSource() {
-                    return typeVariable.getVariableSource();
-                }
-
-                @Override
-                public String getSymbol() {
-                    return typeVariable.getSymbol();
-                }
-            }
         }
 
         /**
@@ -859,7 +698,7 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public boolean represents(java.lang.reflect.Type type) {
+        public boolean represents(Class<?> type) {
             // The JVM conducts more efficient assignability lookups of loaded types what is attempted first.
             return type == this.type || super.represents(type);
         }
@@ -888,25 +727,25 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public GenericTypeDescription getDeclaredSuperType() {
+        public GenericTypeDescription getSuperType() {
             return type.getSuperclass() == null
-                    ? TypeDescription.UNDEFINED
-                    : new LazyProjection.OfLoadedSuperType(type);
+                    ? GenericTypeDescription.UNDEFINED
+                    : new GenericTypeDescription.LazyProjection.OfLoadedSuperType(type);
         }
 
         @Override
-        public GenericTypeList getDeclaredInterfaces() {
+        public GenericTypeList getInterfaces() {
             return isArray()
-                    ? ARRAY_INTERFACES
+                    ? GenericTypeDescription.ARRAY_INTERFACES
                     : new GenericTypeList.OfLoadedInterfaceTypes(type);
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             Class<?> declaringType = type.getDeclaringClass();
             return declaringType == null
                     ? TypeDescription.UNDEFINED
-                    : new TypeDescription.ForLoadedType(declaringType);
+                    : new ForLoadedType(declaringType);
         }
 
         @Override
@@ -1068,12 +907,12 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        protected GenericTypeDescription getDeclaredSuperType() {
-            return TypeDescription.OBJECT;
+        public GenericTypeDescription getSuperType() {
+            return GenericTypeDescription.OBJECT;
         }
 
         @Override
-        protected GenericTypeList getDeclaredInterfaces() {
+        public GenericTypeList getInterfaces() {
             return ARRAY_INTERFACES;
         }
 
@@ -1169,8 +1008,8 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
-            return UNDEFINED;
+        public TypeDescription getDefiningType() {
+            return TypeDescription.UNDEFINED;
         }
 
         @Override
@@ -1225,12 +1064,12 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        protected GenericTypeDescription getDeclaredSuperType() {
+        public GenericTypeDescription getSuperType() {
             return superType;
         }
 
         @Override
-        protected GenericTypeList getDeclaredInterfaces() {
+        public GenericTypeList getInterfaces() {
             return new GenericTypeList.Explicit(interfaces);
         }
 
@@ -1289,7 +1128,7 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return UNDEFINED;
         }
 
@@ -1329,12 +1168,12 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        protected GenericTypeDescription getDeclaredSuperType() {
-            return TypeDescription.OBJECT;
+        public GenericTypeDescription getSuperType() {
+            return GenericTypeDescription.OBJECT;
         }
 
         @Override
-        protected GenericTypeList getDeclaredInterfaces() {
+        public GenericTypeList getInterfaces() {
             return new GenericTypeList.Empty();
         }
 
@@ -1384,7 +1223,7 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
+        public TypeDescription getDefiningType() {
             return UNDEFINED;
         }
 

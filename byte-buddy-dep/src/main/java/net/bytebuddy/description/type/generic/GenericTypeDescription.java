@@ -14,6 +14,7 @@ import net.bytebuddy.implementation.bytecode.StackSize;
 import net.bytebuddy.matcher.ElementMatcher;
 import org.objectweb.asm.signature.SignatureVisitor;
 
+import java.io.Serializable;
 import java.lang.reflect.*;
 import java.util.*;
 
@@ -22,6 +23,42 @@ import java.util.*;
  * a specialization of a generic type.
  */
 public interface GenericTypeDescription extends TypeRepresentation, NamedElement {
+
+    /**
+     * A representation of the {@link java.lang.Object} type.
+     */
+    GenericTypeDescription OBJECT = new ForNonGenericType.OfLoadedType(Object.class);
+
+    /**
+     * A representation of the {@link java.lang.String} type.
+     */
+    GenericTypeDescription STRING = new ForNonGenericType.OfLoadedType(String.class);
+
+    /**
+     * A representation of the {@link java.lang.Class} type.
+     */
+    GenericTypeDescription CLASS = new ForNonGenericType.OfLoadedType(Class.class);
+
+    /**
+     * A representation of the {@code void} non-type.
+     */
+    GenericTypeDescription VOID = new ForNonGenericType.OfLoadedType(void.class);
+
+    /**
+     * A representation of the {@link java.lang.Enum} type.
+     */
+    GenericTypeDescription ENUM = new ForNonGenericType.OfLoadedType(Enum.class);
+
+    /**
+     * A list of interfaces that are implicitly implemented by any array type.
+     */
+    GenericTypeList ARRAY_INTERFACES = new GenericTypeList.ForLoadedType(Cloneable.class, Serializable.class);
+
+    /**
+     * Represents any undefined property of a type description that is instead represented as {@code null} in order
+     * to resemble the Java reflection API which returns {@code null} and is intuitive to many Java developers.
+     */
+    GenericTypeDescription UNDEFINED = null;
 
     /**
      * Returns the sort of the generic type this instance represents.
@@ -132,29 +169,6 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
      * @return This type's type variable symbol.
      */
     String getSymbol();
-
-    /**
-     * Returns the size of the type described by this instance. Wildcard types
-     * ({@link net.bytebuddy.description.type.generic.GenericTypeDescription.Sort#WILDCARD} do not have a well-defined a stack size and
-     * cause an {@link IllegalStateException} to be thrown.
-     *
-     * @return The size of the type described by this instance.
-     */
-    StackSize getStackSize();
-
-    /**
-     * Checks if the type described by this entity is an array.
-     *
-     * @return {@code true} if this type description represents an array.
-     */
-    boolean isArray();
-
-    /**
-     * Checks if the type described by this entity is a primitive type.
-     *
-     * @return {@code true} if this type description represents a primitive type.
-     */
-    boolean isPrimitive();
 
     /**
      * Checks if the type described by this instance represents {@code type}.
