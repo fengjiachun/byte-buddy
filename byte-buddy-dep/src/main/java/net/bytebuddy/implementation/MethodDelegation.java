@@ -4,6 +4,7 @@ import net.bytebuddy.description.field.FieldDescription;
 import net.bytebuddy.description.method.MethodDescription;
 import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.description.type.generic.GenericTypeDescription;
 import net.bytebuddy.dynamic.scaffold.InstrumentedType;
 import net.bytebuddy.dynamic.scaffold.MethodGraph;
 import net.bytebuddy.implementation.bind.MethodDelegationBinder;
@@ -445,7 +446,7 @@ public class MethodDelegation implements Implementation {
      * @return A method delegation that intercepts method calls by delegating to method calls on the given instance.
      */
     public static MethodDelegation toInstanceField(Class<?> type, String fieldName) {
-        return toInstanceField(new TypeDescription.ForLoadedType(nonNull(type)), fieldName);
+        return toInstanceField(new GenericTypeDescription.ForNonGenericType.OfLoadedType(nonNull(type)), fieldName);
     }
 
     /**
@@ -468,7 +469,7 @@ public class MethodDelegation implements Implementation {
      * @param fieldName       The name of the field.
      * @return A method delegation that intercepts method calls by delegating to method calls on the given instance.
      */
-    public static MethodDelegation toInstanceField(TypeDescription typeDescription, String fieldName) {
+    public static MethodDelegation toInstanceField(GenericTypeDescription typeDescription, String fieldName) {
         return toInstanceField(nonNull(typeDescription), isValidIdentifier(fieldName), MethodGraph.Compiler.DEFAULT);
     }
 
@@ -494,7 +495,7 @@ public class MethodDelegation implements Implementation {
      * @return A method delegation that intercepts method calls by delegating to method calls on the given instance.
      */
     public static MethodDelegation toInstanceField(Class<?> type, String fieldName, MethodGraph.Compiler methodGraphCompiler) {
-        return toInstanceField(new TypeDescription.ForLoadedType(nonNull(type)), fieldName, methodGraphCompiler);
+        return toInstanceField(new GenericTypeDescription.ForNonGenericType.OfLoadedType(nonNull(type)), fieldName, methodGraphCompiler);
     }
 
     /**
@@ -518,14 +519,14 @@ public class MethodDelegation implements Implementation {
      * @param methodGraphCompiler The method graph compiler to be used for locating methods to delegate to.
      * @return A method delegation that intercepts method calls by delegating to method calls on the given instance.
      */
-    public static MethodDelegation toInstanceField(TypeDescription typeDescription, String fieldName, MethodGraph.Compiler methodGraphCompiler) {
+    public static MethodDelegation toInstanceField(GenericTypeDescription typeDescription, String fieldName, MethodGraph.Compiler methodGraphCompiler) {
         return new MethodDelegation(new ImplementationDelegate.ForInstanceField(nonNull(typeDescription), isValidIdentifier(fieldName)),
                 TargetMethodAnnotationDrivenBinder.ParameterBinder.DEFAULTS,
                 Argument.NextUnboundAsDefaultsProvider.INSTANCE,
                 TargetMethodAnnotationDrivenBinder.TerminationHandler.Returning.INSTANCE,
                 MethodDelegationBinder.AmbiguityResolver.DEFAULT,
                 Assigner.DEFAULT,
-                new MethodContainer.ForVirtualMethods(methodGraphCompiler, typeDescription));
+                new MethodContainer.ForVirtualMethods(methodGraphCompiler, typeDescription.asErasure()));
     }
 
     /**
@@ -837,7 +838,7 @@ public class MethodDelegation implements Implementation {
                 return instrumentedType
                         .withField(new FieldDescription.Token(fieldName,
                                 Opcodes.ACC_SYNTHETIC | Opcodes.ACC_STATIC | Opcodes.ACC_PUBLIC,
-                                new TypeDescription.ForLoadedType(delegate.getClass())))
+                                new GenericTypeDescription.ForNonGenericType.OfLoadedType(delegate.getClass())))
                         .withInitializer(LoadedTypeInitializer.ForStaticField.accessible(fieldName, delegate));
             }
 
@@ -885,7 +886,7 @@ public class MethodDelegation implements Implementation {
             /**
              * The type of the method delegation target.
              */
-            private final TypeDescription fieldType;
+            private final GenericTypeDescription fieldType;
 
             /**
              * Creates a new instance field implementation delegate.
@@ -894,7 +895,7 @@ public class MethodDelegation implements Implementation {
              *                  field type.
              * @param fieldName The name of the field.
              */
-            public ForInstanceField(TypeDescription fieldType, String fieldName) {
+            public ForInstanceField(GenericTypeDescription fieldType, String fieldName) {
                 this.fieldType = fieldType;
                 this.fieldName = fieldName;
             }
@@ -912,7 +913,7 @@ public class MethodDelegation implements Implementation {
 
             @Override
             public MethodDelegationBinder.MethodInvoker getMethodInvoker(TypeDescription instrumentedType) {
-                return new MethodDelegationBinder.MethodInvoker.Virtual(fieldType);
+                return new MethodDelegationBinder.MethodInvoker.Virtual(fieldType.asErasure());
             }
 
             @Override

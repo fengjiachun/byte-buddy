@@ -516,7 +516,7 @@ public interface MethodRebaseResolver {
 
                 @Override
                 public ParameterList<ParameterDescription.InDefinedShape> getParameters() {
-                    return new ParameterList.Explicit.ForTypes(this, join(methodDescription.getParameters().asTypeList().asErasures(), placeholderType));
+                    return new ParameterList.Explicit.ForTypes(this, join(methodDescription.getParameters().asTypeList().asRawTypes(), placeholderType.asGenericType()));
                 }
 
                 @Override

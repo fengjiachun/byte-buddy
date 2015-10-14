@@ -536,7 +536,7 @@ public abstract class FieldAccessor implements Implementation {
          * @param modifier        The modifiers for the field.
          * @return A field accessor that defines a field of the given type.
          */
-        AssignerConfigurable defineAs(TypeDescription typeDescription, ModifierContributor.ForField... modifier);
+        AssignerConfigurable defineAs(GenericTypeDescription typeDescription, ModifierContributor.ForField... modifier);
     }
 
     /**
@@ -702,11 +702,11 @@ public abstract class FieldAccessor implements Implementation {
 
         @Override
         public AssignerConfigurable defineAs(Class<?> type, ModifierContributor.ForField... modifier) {
-            return defineAs(new TypeDescription.ForLoadedType(nonNull(type)), modifier);
+            return defineAs(new GenericTypeDescription.ForNonGenericType.OfLoadedType(nonNull(type)), modifier);
         }
 
         @Override
-        public AssignerConfigurable defineAs(TypeDescription typeDescription, ModifierContributor.ForField... modifier) {
+        public AssignerConfigurable defineAs(GenericTypeDescription typeDescription, ModifierContributor.ForField... modifier) {
             return new ForNamedField(assigner,
                     typing,
                     fieldName,
@@ -837,7 +837,7 @@ public abstract class FieldAccessor implements Implementation {
                 /**
                  * The type of the field that is to be defined.
                  */
-                private final TypeDescription typeDescription;
+                private final GenericTypeDescription typeDescription;
 
                 /**
                  * The modifier of the field that is to be defined.
@@ -851,7 +851,7 @@ public abstract class FieldAccessor implements Implementation {
                  * @param typeDescription The type of the field that is to be defined.
                  * @param modifiers       The modifiers of the field that is to be defined.
                  */
-                protected FieldDefiner(String name, TypeDescription typeDescription, int modifiers) {
+                protected FieldDefiner(String name, GenericTypeDescription typeDescription, int modifiers) {
                     this.name = name;
                     this.typeDescription = typeDescription;
                     this.modifiers = modifiers;
@@ -865,7 +865,7 @@ public abstract class FieldAccessor implements Implementation {
                  * @param contributor     The modifiers of the field that is to be defined.
                  * @return A corresponding preparation handler.
                  */
-                public static PreparationHandler of(String name, TypeDescription typeDescription, ModifierContributor.ForField... contributor) {
+                public static PreparationHandler of(String name, GenericTypeDescription typeDescription, ModifierContributor.ForField... contributor) {
                     return new FieldDefiner(name, typeDescription, resolveModifierContributors(ByteBuddyCommons.FIELD_MODIFIER_MASK, contributor));
                 }
 

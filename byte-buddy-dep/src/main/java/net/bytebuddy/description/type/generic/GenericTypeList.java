@@ -674,6 +674,11 @@ public interface GenericTypeList extends FilterableList<GenericTypeDescription, 
         }
 
         @Override
+        public GenericTypeList asRawTypes() {
+            return this;
+        }
+
+        @Override
         public int getStackSize() {
             return 0;
         }

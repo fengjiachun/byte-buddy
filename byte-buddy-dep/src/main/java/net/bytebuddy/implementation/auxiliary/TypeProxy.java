@@ -102,7 +102,7 @@ public class TypeProxy implements AuxiliaryType {
                 .implement(serializableProxy ? new Class<?>[]{Serializable.class} : new Class<?>[0])
                 .method(any())
                 .intercept(new MethodCall(methodAccessorFactory))
-                .defineMethod(REFLECTION_METHOD, TargetType.DESCRIPTION, Collections.<TypeDescription>emptyList(), Ownership.STATIC)
+                .defineMethod(REFLECTION_METHOD, TargetType.DESCRIPTION.asErasure(), Collections.<TypeDescription>emptyList(), Ownership.STATIC)
                 .intercept(SilentConstruction.INSTANCE)
                 .make();
     }
@@ -735,7 +735,7 @@ public class TypeProxy implements AuxiliaryType {
         public InstrumentedType prepare(InstrumentedType instrumentedType) {
             return instrumentedType.withField(new FieldDescription.Token(INSTANCE_FIELD,
                     Opcodes.ACC_SYNTHETIC,
-                    TypeProxy.this.implementationTarget.getTypeDescription()));
+                    TypeProxy.this.implementationTarget.getTypeDescription().asGenericType()));
         }
 
         @Override

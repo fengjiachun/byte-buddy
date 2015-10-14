@@ -1123,7 +1123,7 @@ public interface TypeWriter<T> {
 
                     @Override
                     public GenericTypeDescription getReturnType() {
-                        return bridgeType.getReturnType();
+                        return bridgeType.getReturnType().asGenericType();
                     }
 
                     @Override

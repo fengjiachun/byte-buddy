@@ -255,9 +255,9 @@ public interface InstrumentedType extends TypeDescription {
         private final LoadedTypeInitializer loadedTypeInitializer;
 
         /**
-         * The declaring type of the instrumented type or {@code null} if no such type exists.
+         * The defining type of the instrumented type or {@code null} if no such type exists.
          */
-        private final TypeDescription declaringType;
+        private final TypeDescription definingType;
 
         /**
          * The enclosing method of the instrumented type or {@code null} if no such type exists.
@@ -318,9 +318,9 @@ public interface InstrumentedType extends TypeDescription {
                     annotationDescriptions,
                     typeInitializer,
                     loadedTypeInitializer,
-                    null,
-                    null,
-                    null,
+                    UNDEFINED,
+                    MethodDescription.UNDEFINED,
+                    UNDEFINED,
                     false,
                     false,
                     false);
@@ -339,7 +339,7 @@ public interface InstrumentedType extends TypeDescription {
          * @param annotationDescriptions A list of annotations of the annotated type.
          * @param typeInitializer        The type initializer of the instrumented type.
          * @param loadedTypeInitializer  The loaded type initializer of the instrumented type.
-         * @param declaringType          The declaring type of the instrumented type or {@code null} if no such type exists.
+         * @param definingType           The defining type of the instrumented type or {@code null} if no such type exists.
          * @param enclosingMethod        The enclosing method of the instrumented type or {@code null} if no such type exists.
          * @param enclosingType          The enclosing type of the instrumented type or {@code null} if no such type exists.
          * @param memberClass            {@code true} if this type is a member class.
@@ -356,7 +356,7 @@ public interface InstrumentedType extends TypeDescription {
                        List<? extends AnnotationDescription> annotationDescriptions,
                        TypeInitializer typeInitializer,
                        LoadedTypeInitializer loadedTypeInitializer,
-                       TypeDescription declaringType,
+                       TypeDescription definingType,
                        MethodDescription enclosingMethod,
                        TypeDescription enclosingType,
                        boolean memberClass,
@@ -372,7 +372,7 @@ public interface InstrumentedType extends TypeDescription {
             this.annotationDescriptions = annotationDescriptions;
             this.typeInitializer = typeInitializer;
             this.loadedTypeInitializer = loadedTypeInitializer;
-            this.declaringType = declaringType;
+            this.definingType = definingType;
             this.enclosingMethod = enclosingMethod;
             this.enclosingType = enclosingType;
             this.memberClass = memberClass;
@@ -486,7 +486,7 @@ public interface InstrumentedType extends TypeDescription {
 
         @Override
         public TypeDescription getDefiningType() {
-            return declaringType;
+            return definingType;
         }
 
         @Override

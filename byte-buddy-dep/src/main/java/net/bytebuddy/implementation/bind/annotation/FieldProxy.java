@@ -10,7 +10,6 @@ import net.bytebuddy.description.method.MethodList;
 import net.bytebuddy.description.method.ParameterDescription;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeRepresentation;
-import net.bytebuddy.description.type.generic.GenericTypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.TargetType;
 import net.bytebuddy.dynamic.scaffold.InstrumentedType;
@@ -682,7 +681,7 @@ public @interface FieldProxy {
             public InstrumentedType prepare(InstrumentedType instrumentedType) {
                 return instrumentedType.withField(new FieldDescription.Token(AccessorProxy.FIELD_NAME,
                         Opcodes.ACC_FINAL | Opcodes.ACC_PRIVATE,
-                        this.instrumentedType));
+                        this.instrumentedType.asGenericType()));
             }
 
             @Override
