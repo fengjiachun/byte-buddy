@@ -12,7 +12,6 @@ import net.bytebuddy.description.type.TypeRepresentation;
 import net.bytebuddy.dynamic.TargetType;
 import net.bytebuddy.implementation.bytecode.StackSize;
 import net.bytebuddy.matcher.ElementMatcher;
-import org.objectweb.asm.TypeReference;
 import org.objectweb.asm.signature.SignatureVisitor;
 
 import java.lang.reflect.*;
@@ -173,6 +172,8 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
      * @return The visitor's return value.
      */
     <T> T accept(Visitor<T> visitor);
+
+    GenericTypeDescription asRawType();
 
     /**
      * Represents a {@link GenericTypeDescription}'s form.
@@ -1054,6 +1055,11 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
         @Override
         public GenericTypeDescription asGenericType() {
             return this;
+        }
+
+        @Override
+        public GenericTypeDescription asRawType() {
+            return asErasure().asRawType();
         }
     }
 
@@ -2241,6 +2247,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
         public boolean represents(Type type) {
             return resolve().represents(type);
         }
+
         @Override
         public Iterator<TypeRepresentation> iterator() {
             return resolve().iterator();
