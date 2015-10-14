@@ -731,10 +731,10 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                 for (GenericTypeDescription parameter : parameterizedType.getParameters()) {
                     parameters.add(parameter.accept(this));
                 }
-                return new GenericTypeDescription.ForParameterizedType.Latent(parameterizedType.asErasure().accept(this).asErasure(),
+                return new GenericTypeDescription.ForParameterizedType.Latent(parameterizedType.asRawType().accept(this).asErasure(),
                         parameters,
                         ownerType == null
-                                ? TypeDescription.UNDEFINED
+                                ? GenericTypeDescription.UNDEFINED
                                 : ownerType.accept(this));
             }
 
@@ -847,7 +847,7 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
                 @Override
                 protected GenericTypeDescription onSimpleType(GenericTypeDescription typeDescription) {
                     return typeDescription.equals(TargetType.DESCRIPTION)
-                            ? declaringType
+                            ? declaringType.asGenericType()
                             : typeDescription;
                 }
 
@@ -1201,9 +1201,10 @@ public interface GenericTypeDescription extends TypeRepresentation, NamedElement
         }
 
         @Override
-        @SuppressFBWarnings(value = "EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS", justification = "Type check is performed by erasure instance")
         public boolean equals(Object other) {
-            return asErasure().equals(other);
+            return other instanceof GenericTypeDescription
+                    && ((GenericTypeDescription) other).getSort().isNonGeneric()
+                    && asErasure().equals(((GenericTypeDescription) other).asErasure());
         }
 
         @Override
