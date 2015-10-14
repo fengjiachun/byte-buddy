@@ -31,7 +31,8 @@ import java.util.List;
 
 import static net.bytebuddy.matcher.ElementMatchers.isVisibleTo;
 import static net.bytebuddy.matcher.ElementMatchers.named;
-import static net.bytebuddy.utility.ByteBuddyCommons.*;
+import static net.bytebuddy.utility.ByteBuddyCommons.join;
+import static net.bytebuddy.utility.ByteBuddyCommons.nonNull;
 
 /**
  * This {@link Implementation} allows the invocation of a specified method while
@@ -361,7 +362,7 @@ public class MethodCall implements Implementation {
      * @return A method call which assigns the next parameter to the value of the instance field.
      */
     public MethodCall withInstanceField(Class<?> type, String name) {
-        return withInstanceField(new TypeDescription.ForLoadedType(nonNull(type)), name);
+        return withInstanceField(new GenericTypeDescription.ForNonGenericType.OfLoadedType(nonNull(type)), name);
     }
 
     /**
@@ -372,7 +373,7 @@ public class MethodCall implements Implementation {
      * @param name            The name of the field.
      * @return A method call which assigns the next parameter to the value of the instance field.
      */
-    public MethodCall withInstanceField(TypeDescription typeDescription, String name) {
+    public MethodCall withInstanceField(GenericTypeDescription typeDescription, String name) {
         return new MethodCall(methodLocator,
                 targetHandler,
                 join(argumentLoaders, new ArgumentLoader.ForInstanceField(nonNull(typeDescription), nonNull(name))),
@@ -695,7 +696,7 @@ public class MethodCall implements Implementation {
                 return instrumentedType
                         .withField(new FieldDescription.Token(fieldName,
                                 Opcodes.ACC_SYNTHETIC | Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
-                                new TypeDescription.ForLoadedType(target.getClass())))
+                                new GenericTypeDescription.ForNonGenericType.OfLoadedType(target.getClass())))
                         .withInitializer(LoadedTypeInitializer.ForStaticField.accessible(fieldName, target));
             }
 
@@ -732,7 +733,7 @@ public class MethodCall implements Implementation {
             /**
              * The type of the field.
              */
-            private final TypeDescription fieldType;
+            private final GenericTypeDescription fieldType;
 
             /**
              * Creates a new target handler for storing a method invocation target in an
@@ -741,7 +742,7 @@ public class MethodCall implements Implementation {
              * @param fieldName The name of the field.
              * @param fieldType The type of the field.
              */
-            public ForInstanceField(String fieldName, TypeDescription fieldType) {
+            public ForInstanceField(String fieldName, GenericTypeDescription fieldType) {
                 this.fieldName = fieldName;
                 this.fieldType = fieldType;
             }
@@ -1077,7 +1078,7 @@ public class MethodCall implements Implementation {
                 return instrumentedType
                         .withField(new FieldDescription.Token(fieldName,
                                 Opcodes.ACC_SYNTHETIC | Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
-                                new TypeDescription.ForLoadedType(value.getClass())))
+                                new GenericTypeDescription.ForNonGenericType.OfLoadedType(value.getClass())))
                         .withInitializer(new LoadedTypeInitializer.ForStaticField<Object>(fieldName, value, true));
             }
 
@@ -1109,7 +1110,7 @@ public class MethodCall implements Implementation {
             /**
              * The type of the field.
              */
-            private final TypeDescription fieldType;
+            private final GenericTypeDescription fieldType;
 
             /**
              * The name of the field.
@@ -1122,7 +1123,7 @@ public class MethodCall implements Implementation {
              * @param fieldType The name of the field.
              * @param fieldName The type of the field.
              */
-            public ForInstanceField(TypeDescription fieldType, String fieldName) {
+            public ForInstanceField(GenericTypeDescription fieldType, String fieldName) {
                 this.fieldType = fieldType;
                 this.fieldName = fieldName;
             }
@@ -1139,7 +1140,7 @@ public class MethodCall implements Implementation {
                 StackManipulation stackManipulation = new StackManipulation.Compound(
                         MethodVariableAccess.REFERENCE.loadOffset(0),
                         FieldAccess.forField(instrumentedType.getDeclaredFields().filter(named(fieldName)).getOnly()).getter(),
-                        assigner.assign(fieldType, targetType, typing));
+                        assigner.assign(fieldType.asErasure(), targetType, typing));
                 if (!stackManipulation.isValid()) {
                     throw new IllegalStateException("Cannot assign field " + fieldName + " of type " + fieldType + " to " + targetType);
                 }
@@ -1910,7 +1911,7 @@ public class MethodCall implements Implementation {
                                              Assigner.Typing typing) {
                 StackManipulation stackManipulation = new StackManipulation.Compound(
                         javaInstance.asStackManipulation(),
-                        assigner.assign(javaInstance.getInstanceType(), targetType, typing));
+                        assigner.assign(javaInstance.getInstanceType().asErasure(), targetType, typing));
                 if (!stackManipulation.isValid()) {
                     throw new IllegalStateException("Cannot assign Class value to " + targetType);
                 }
