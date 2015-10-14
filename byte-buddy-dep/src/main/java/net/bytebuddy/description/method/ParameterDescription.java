@@ -6,7 +6,6 @@ import net.bytebuddy.description.NamedElement;
 import net.bytebuddy.description.annotation.AnnotatedCodeElement;
 import net.bytebuddy.description.annotation.AnnotationDescription;
 import net.bytebuddy.description.annotation.AnnotationList;
-import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.description.type.TypeList;
 import net.bytebuddy.description.type.generic.GenericTypeDescription;
 import net.bytebuddy.implementation.bytecode.StackSize;
@@ -558,7 +557,7 @@ public interface ParameterDescription extends AnnotatedCodeElement,
 
             @Override
             public GenericTypeDescription getType() {
-                return new TypeDescription.LazyProjection.OfLoadedParameter.OfLegacyVmMethod(method, index, parameterType);
+                return new GenericTypeDescription.LazyProjection.OfLoadedParameter.OfLegacyVmMethod(method, index, parameterType);
             }
 
             @Override
@@ -630,7 +629,7 @@ public interface ParameterDescription extends AnnotatedCodeElement,
 
             @Override
             public GenericTypeDescription getType() {
-                return new TypeDescription.LazyProjection.OfLoadedParameter.OfLegacyVmConstructor(constructor, index, parameterType);
+                return new GenericTypeDescription.LazyProjection.OfLoadedParameter.OfLegacyVmConstructor(constructor, index, parameterType);
             }
 
             @Override
