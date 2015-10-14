@@ -670,6 +670,11 @@ public interface TypeDescription extends GenericTypeDescription, TypeVariableSou
         }
 
         @Override
+        public GenericTypeDescription asRawType() {
+            return new ForNonGenericType.Latent(this);
+        }
+
+        @Override
         public boolean equals(Object other) {
             return other == this || other instanceof GenericTypeDescription
                     && ((GenericTypeDescription) other).getSort().isNonGeneric()
