@@ -69,7 +69,7 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
     /**
      * A list of interfaces that are implicitly implemented by any array type.
      */
-    GenericTypeList ARRAY_INTERFACES = new GenericTypeList.ForLoadedType(Cloneable.class, Serializable.class);
+    TypeList ARRAY_INTERFACES = new TypeList.ForLoadedType(Cloneable.class, Serializable.class);
 
     /**
      * Represents any undefined property of a type description that is instead represented as {@code null} in order
@@ -300,7 +300,7 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
             if (targetType.isArray()) {
                 return sourceType.isArray()
                         ? isAssignable(sourceType.getComponentType(), targetType.getComponentType())
-                        : sourceType.represents(Object.class) || TypeDescription.ARRAY_INTERFACES.contains(sourceType);
+                        : sourceType.represents(Object.class) || ARRAY_INTERFACES.contains(sourceType);
             }
             // (2) Interfaces do not extend the Object type but are assignable to the Object type.
             if (sourceType.represents(Object.class)) {
@@ -913,7 +913,7 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
 
         @Override
         public GenericTypeList getInterfaces() {
-            return ARRAY_INTERFACES;
+            return GenericTypeDescription.ARRAY_INTERFACES;
         }
 
         @Override
@@ -1123,8 +1123,8 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
         }
 
         @Override
-        public TypeDescription getDeclaringType() {
-            throw new IllegalStateException("Cannot resolve declared type of a latent type description: " + this);
+        public TypeDescription getDefiningType() {
+            throw new IllegalStateException("Cannot resolve defining type of a latent type description: " + this);
         }
 
         @Override
@@ -1163,12 +1163,12 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
         }
 
         @Override
-        protected GenericTypeDescription getDeclaredSuperType() {
-            return TypeDescription.OBJECT;
+        public GenericTypeDescription getSuperType() {
+            return GenericTypeDescription.OBJECT;
         }
 
         @Override
-        protected GenericTypeList getDeclaredInterfaces() {
+        public GenericTypeList getInterfaces() {
             return new GenericTypeList.Empty();
         }
 
