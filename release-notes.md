@@ -1,11 +1,13 @@
 Byte Buddy release notes
 ------------------------
 
-### Current `HEAD`
+### 15. October 2015: version 0.7 (release candidate 5)
 
 - Fixed parser to supress exceptions from generic signatures which are not supposed to be included in the class file if no array type is generic.
 - Fixed class validator which did not allow `<clinit>` blocks in interface types.
 - Added restriction to retransformation to not attempt a retransformation at all if no class should be retransformed.
+- Added a factory for creating an `Implementation.Context` that is configurable. This way, it is possible to avoid a rebase of a type initializer which is not always possible.
+- Added a possibility to specify for an `AgentBuilder` how it should redefine or rebase a class that is intercepted.
 
 ### 13. October 2015: version 0.7 (release candidate 4)
 
