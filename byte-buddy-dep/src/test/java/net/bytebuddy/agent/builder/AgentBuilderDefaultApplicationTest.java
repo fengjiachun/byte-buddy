@@ -1,5 +1,6 @@
 package net.bytebuddy.agent.builder;
 
+import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.agent.ByteBuddyAgent;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
@@ -11,7 +12,9 @@ import net.bytebuddy.implementation.bind.annotation.SuperCall;
 import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.test.utility.AgentAttachmentRule;
 import net.bytebuddy.test.utility.ClassFileExtraction;
+import net.bytebuddy.test.utility.DebuggingWrapper;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.MethodRule;
@@ -23,6 +26,8 @@ import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.ProtectionDomain;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 import static net.bytebuddy.matcher.ElementMatchers.isAnnotatedWith;
@@ -43,8 +48,9 @@ public class AgentBuilderDefaultApplicationTest {
 
     @Before
     public void setUp() throws Exception {
+        // Need to add enclosing class. Otherwise, the child first semantics break runtime validation of inner class logic.
         classLoader = new ByteArrayClassLoader.ChildFirst(getClass().getClassLoader(),
-                ClassFileExtraction.of(Foo.class, Bar.class, Qux.class, Baz.class),
+                ClassFileExtraction.of(Foo.class, Bar.class, Qux.class, Baz.class, getClass()),
                 DEFAULT_PROTECTION_DOMAIN,
                 AccessController.getContext(),
                 ByteArrayClassLoader.PersistenceHandler.MANIFEST,
@@ -56,7 +62,7 @@ public class AgentBuilderDefaultApplicationTest {
     public void testAgentWithoutSelfInitialization() throws Exception {
         assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
         ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
-                .disableSelfInitialization()
+                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
                 .installOnByteBuddyAgent();
         try {
@@ -102,7 +108,7 @@ public class AgentBuilderDefaultApplicationTest {
     public void testAgentWithoutSelfInitializationWithNativeMethodPrefix() throws Exception {
         assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
         ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
-                .disableSelfInitialization()
+                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .withNativeMethodPrefix(QUX)
                 .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
                 .installOnByteBuddyAgent();
@@ -115,8 +121,46 @@ public class AgentBuilderDefaultApplicationTest {
         }
     }
 
+    @Test
+    @AgentAttachmentRule.Enforce
+    public void testRedefinition() throws Exception {
+        assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
+        assertThat(classLoader.loadClass(Foo.class.getName()).getName(), is(Foo.class.getName())); // ensure that class is loaded
+        ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
+                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
+                .withTypeStrategy(AgentBuilder.TypeStrategy.REDEFINE)
+                .withRedefinitionStrategy(AgentBuilder.RedefinitionStrategy.REDEFINITION)
+                .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
+                .installOnByteBuddyAgent();
+        try {
+            Class<?> type = classLoader.loadClass(Foo.class.getName());
+            assertThat(type.getDeclaredMethod(FOO).invoke(type.newInstance()), is((Object) BAR));
+        } finally {
+            ByteBuddyAgent.getInstrumentation().removeTransformer(classFileTransformer);
+        }
+    }
+
+    @Test
+    @AgentAttachmentRule.Enforce
+    public void testRetransformation() throws Exception {
+        assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
+        assertThat(classLoader.loadClass(Foo.class.getName()).getName(), is(Foo.class.getName())); // ensure that class is loaded
+        ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
+                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
+                .withTypeStrategy(AgentBuilder.TypeStrategy.REDEFINE)
+                .withRedefinitionStrategy(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
+                .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
+                .installOnByteBuddyAgent();
+        try {
+            Class<?> type = classLoader.loadClass(Foo.class.getName());
+            assertThat(type.getDeclaredMethod(FOO).invoke(type.newInstance()), is((Object) BAR));
+        } finally {
+            ByteBuddyAgent.getInstrumentation().removeTransformer(classFileTransformer);
+        }
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
-    private @interface ShouldRebase {
+    public @interface ShouldRebase {
 
     }
 

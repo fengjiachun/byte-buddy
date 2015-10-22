@@ -13,7 +13,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.*;
 
-public class ClassVisitorWrapperChainTest {
+public class ClassVisitorWrapperCompoundTest {
 
     private static final int FOO = 1, BAR = 2, QUX = 3, BAZ = 4;
 
@@ -41,9 +41,8 @@ public class ClassVisitorWrapperChainTest {
 
     @Test
     public void testWrapperChain() throws Exception {
-        ClassVisitorWrapper.Chain chain = new ClassVisitorWrapper.Chain();
-        chain = chain.append(wrapper).append(append).prepend(prepend);
-        assertThat(chain.wrap(prependVisitor), is(resultVisitor));
+        ClassVisitorWrapper.Compound compound = new ClassVisitorWrapper.Compound(prepend, wrapper, append);
+        assertThat(compound.wrap(prependVisitor), is(resultVisitor));
         verify(prepend).wrap(prependVisitor);
         verifyNoMoreInteractions(prepend);
         verify(wrapper).wrap(wrapperVisitor);
@@ -53,10 +52,9 @@ public class ClassVisitorWrapperChainTest {
     }
 
     @Test
-    public void testReaderHint() throws Exception {
-        ClassVisitorWrapper.Chain chain = new ClassVisitorWrapper.Chain();
-        chain = chain.append(wrapper).append(append).prepend(prepend);
-        assertThat(chain.mergeReader(FOO), is(BAZ));
+    public void testReaderFlags() throws Exception {
+        ClassVisitorWrapper.Compound compound = new ClassVisitorWrapper.Compound(prepend, wrapper, append);
+        assertThat(compound.mergeReader(FOO), is(BAZ));
         verify(prepend).mergeReader(FOO);
         verifyNoMoreInteractions(prepend);
         verify(wrapper).mergeReader(BAR);
@@ -66,10 +64,9 @@ public class ClassVisitorWrapperChainTest {
     }
 
     @Test
-    public void testWriterHint() throws Exception {
-        ClassVisitorWrapper.Chain chain = new ClassVisitorWrapper.Chain();
-        chain = chain.append(wrapper).append(append).prepend(prepend);
-        assertThat(chain.mergeWriter(FOO), is(BAZ));
+    public void testWriterFlags() throws Exception {
+        ClassVisitorWrapper.Compound compound = new ClassVisitorWrapper.Compound(prepend, wrapper, append);
+        assertThat(compound.mergeWriter(FOO), is(BAZ));
         verify(prepend).mergeWriter(FOO);
         verifyNoMoreInteractions(prepend);
         verify(wrapper).mergeWriter(BAR);
@@ -80,6 +77,6 @@ public class ClassVisitorWrapperChainTest {
 
     @Test
     public void testObjectProperties() throws Exception {
-        ObjectPropertyAssertion.of(ClassVisitorWrapper.Chain.class).apply();
+        ObjectPropertyAssertion.of(ClassVisitorWrapper.Compound.class).apply();
     }
 }

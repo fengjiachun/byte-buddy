@@ -2,8 +2,7 @@ package net.bytebuddy.asm;
 
 import org.objectweb.asm.ClassVisitor;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -14,24 +13,24 @@ import java.util.List;
 public interface ClassVisitorWrapper {
 
     /**
-     * Defines a hint that is provided to any {@code ClassWriter} when writing a class. Typically, this gives opportunity to instruct ASM
-     * to compute stack map frames or the size of the local variables array and the operand stack. If no specific hints are required for
+     * Defines the flags that are provided to any {@code ClassWriter} when writing a class. Typically, this gives opportunity to instruct ASM
+     * to compute stack map frames or the size of the local variables array and the operand stack. If no specific flags are required for
      * applying this wrapper, the given value is to be returned.
      *
-     * @param hint The current hint. This value should be merged (e.g. {@code hint | foo}) into the value that is returned by this wrapper.
-     * @return The hint to be provided to the ASM {@code ClassWriter}.
+     * @param flags The currently set flags. This value should be combined (e.g. {@code flags | foo}) into the value that is returned by this wrapper.
+     * @return The flags to be provided to the ASM {@code ClassWriter}.
      */
-    int mergeWriter(int hint);
+    int mergeWriter(int flags);
 
     /**
-     * Defines a hint that is provided to any {@code ClassReader} when reading a class if applicable. Typically, this gives opportunity to
-     * instruct ASM to expand or skip frames and to skip code and debug information. If no specific hints are required for applying this
+     * Defines the flags that are provided to any {@code ClassReader} when reading a class if applicable. Typically, this gives opportunity to
+     * instruct ASM to expand or skip frames and to skip code and debug information. If no specific flags are required for applying this
      * wrapper, the given value is to be returned.
      *
-     * @param hint The current hint. This value should be merged (e.g. {@code hint | foo}) into the value that is returned by this wrapper.
-     * @return The hint to be provided to the ASM {@code ClassReader}.
+     * @param flags The currently set flags. This value should be combined (e.g. {@code flags | foo}) into the value that is returned by this wrapper.
+     * @return The flags to be provided to the ASM {@code ClassReader}.
      */
-    int mergeReader(int hint);
+    int mergeReader(int flags);
 
     /**
      * Applies a {@code ClassVisitorWrapper} to the creation of a {@link net.bytebuddy.dynamic.DynamicType}.
@@ -43,20 +42,56 @@ public interface ClassVisitorWrapper {
     ClassVisitor wrap(ClassVisitor classVisitor);
 
     /**
+     * A class visitor wrapper that does not apply any changes.
+     */
+    enum NoOp implements ClassVisitorWrapper {
+
+        /**
+         * The singleton instance.
+         */
+        INSTANCE;
+
+        @Override
+        public int mergeWriter(int flags) {
+            return flags;
+        }
+
+        @Override
+        public int mergeReader(int flags) {
+            return flags;
+        }
+
+        @Override
+        public ClassVisitor wrap(ClassVisitor classVisitor) {
+            return classVisitor;
+        }
+
+        @Override
+        public String toString() {
+            return "ClassVisitorWrapper.NoOp." + name();
+        }
+    }
+
+    /**
      * An ordered, immutable chain of {@link net.bytebuddy.asm.ClassVisitorWrapper}s.
      */
-    class Chain implements ClassVisitorWrapper {
+    class Compound implements ClassVisitorWrapper {
 
         /**
          * The class visitor wrappers that are represented by this chain in their order. This list must not be mutated.
          */
-        private final List<ClassVisitorWrapper> classVisitorWrappers;
+        private final List<? extends ClassVisitorWrapper> classVisitorWrappers;
 
         /**
-         * Creates an immutable empty chain.
+         * Creates a new immutable chain based on an existing list of {@link net.bytebuddy.asm.ClassVisitorWrapper}s
+         * where no copy of the received array is made.
+         *
+         * @param classVisitorWrapper An array of {@link net.bytebuddy.asm.ClassVisitorWrapper}s where elements
+         *                            at the beginning of the list are applied first, i.e. will be at the bottom of the generated
+         *                            {@link org.objectweb.asm.ClassVisitor}.
          */
-        public Chain() {
-            this.classVisitorWrappers = Collections.emptyList();
+        public Compound(ClassVisitorWrapper... classVisitorWrapper) {
+            this(Arrays.asList(classVisitorWrapper));
         }
 
         /**
@@ -67,52 +102,24 @@ public interface ClassVisitorWrapper {
          *                             at the beginning of the list are applied first, i.e. will be at the bottom of the generated
          *                             {@link org.objectweb.asm.ClassVisitor}.
          */
-        protected Chain(List<ClassVisitorWrapper> classVisitorWrappers) {
+        public Compound(List<? extends ClassVisitorWrapper> classVisitorWrappers) {
             this.classVisitorWrappers = classVisitorWrappers;
         }
 
-        /**
-         * Adds a {@code ClassVisitorWrapper} to the <b>beginning</b> of the chain such that the wrapped
-         * ASM {@code ClassVisitor} will be applied before the other class visitors.
-         *
-         * @param classVisitorWrapper The {@code ClassVisitorWrapper} to add to the beginning of the chain.
-         * @return A new chain incorporating the {@code ClassVisitorWrapper}.
-         */
-        public Chain prepend(ClassVisitorWrapper classVisitorWrapper) {
-            List<ClassVisitorWrapper> appendedList = new ArrayList<ClassVisitorWrapper>(classVisitorWrappers.size() + 1);
-            appendedList.add(classVisitorWrapper);
-            appendedList.addAll(classVisitorWrappers);
-            return new Chain(appendedList);
-        }
-
-        /**
-         * Adds a {@code ClassVisitorWrapper} to the <b>end</b> of the chain such that the wrapped
-         * ASM {@code ClassVisitor} will be applied after the other class visitors.
-         *
-         * @param classVisitorWrapper The {@code ClassVisitorWrapper} to add to the end of the chain.
-         * @return A new chain incorporating the {@code ClassVisitorWrapper}.
-         */
-        public Chain append(ClassVisitorWrapper classVisitorWrapper) {
-            List<ClassVisitorWrapper> appendedList = new ArrayList<ClassVisitorWrapper>(classVisitorWrappers.size() + 1);
-            appendedList.addAll(classVisitorWrappers);
-            appendedList.add(classVisitorWrapper);
-            return new Chain(appendedList);
+        @Override
+        public int mergeWriter(int flags) {
+            for (ClassVisitorWrapper classVisitorWrapper : classVisitorWrappers) {
+                flags = classVisitorWrapper.mergeWriter(flags);
+            }
+            return flags;
         }
 
         @Override
-        public int mergeWriter(int hint) {
+        public int mergeReader(int flags) {
             for (ClassVisitorWrapper classVisitorWrapper : classVisitorWrappers) {
-                hint = classVisitorWrapper.mergeWriter(hint);
+                flags = classVisitorWrapper.mergeReader(flags);
             }
-            return hint;
-        }
-
-        @Override
-        public int mergeReader(int hint) {
-            for (ClassVisitorWrapper classVisitorWrapper : classVisitorWrappers) {
-                hint = classVisitorWrapper.mergeReader(hint);
-            }
-            return hint;
+            return flags;
         }
 
         @Override
@@ -126,7 +133,7 @@ public interface ClassVisitorWrapper {
         @Override
         public boolean equals(Object other) {
             return this == other || !(other == null || getClass() != other.getClass())
-                    && classVisitorWrappers.equals(((Chain) other).classVisitorWrappers);
+                    && classVisitorWrappers.equals(((Compound) other).classVisitorWrappers);
         }
 
         @Override
@@ -136,7 +143,7 @@ public interface ClassVisitorWrapper {
 
         @Override
         public String toString() {
-            return "ClassVisitorWrapper.Chain{classVisitorWrappers=" + classVisitorWrappers + '}';
+            return "ClassVisitorWrapper.Compound{classVisitorWrappers=" + classVisitorWrappers + '}';
         }
     }
 }

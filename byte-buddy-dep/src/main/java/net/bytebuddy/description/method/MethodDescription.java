@@ -627,7 +627,7 @@ public interface MethodDescription extends TypeVariableSource,
             }
             stringBuilder.append(")");
             GenericTypeList exceptionTypes = getExceptionTypes();
-            if (exceptionTypes.size() > 0) {
+            if (!exceptionTypes.isEmpty()) {
                 stringBuilder.append(" throws ");
                 first = true;
                 for (GenericTypeDescription typeDescription : exceptionTypes) {
@@ -665,7 +665,7 @@ public interface MethodDescription extends TypeVariableSource,
             }
             stringBuilder.append(")");
             TypeList exceptionTypes = getExceptionTypes().asErasures();
-            if (exceptionTypes.size() > 0) {
+            if (!exceptionTypes.isEmpty()) {
                 stringBuilder.append(" throws ");
                 first = true;
                 for (TypeDescription typeDescription : exceptionTypes) {
