@@ -16,6 +16,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.MethodRule;
+import sun.net.www.protocol.http.HttpURLConnection;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -61,7 +62,7 @@ public class AgentBuilderDefaultApplicationTest {
     public void testAgentWithoutSelfInitialization() throws Exception {
         assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
         ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
-                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
+                .withInitializationStrategy(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
                 .installOnByteBuddyAgent();
         try {
@@ -107,7 +108,7 @@ public class AgentBuilderDefaultApplicationTest {
     public void testAgentWithoutSelfInitializationWithNativeMethodPrefix() throws Exception {
         assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
         ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
-                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
+                .withInitializationStrategy(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .withNativeMethodPrefix(QUX)
                 .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
                 .installOnByteBuddyAgent();
@@ -128,7 +129,7 @@ public class AgentBuilderDefaultApplicationTest {
         assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
         assertThat(classLoader.loadClass(SimpleType.class.getName()).getName(), is(SimpleType.class.getName())); // ensure that class is loaded
         ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
-                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
+                .withInitializationStrategy(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .withTypeStrategy(AgentBuilder.TypeStrategy.Default.REDEFINE)
                 .withRedefinitionStrategy(AgentBuilder.RedefinitionStrategy.REDEFINITION)
                 .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
@@ -149,7 +150,7 @@ public class AgentBuilderDefaultApplicationTest {
         assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
         assertThat(classLoader.loadClass(SimpleType.class.getName()).getName(), is(SimpleType.class.getName())); // ensure that class is loaded
         ClassFileTransformer classFileTransformer = new AgentBuilder.Default()
-                .withInitialization(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
+                .withInitializationStrategy(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .withTypeStrategy(AgentBuilder.TypeStrategy.Default.REDEFINE)
                 .withRedefinitionStrategy(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
                 .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new FooTransformer())
@@ -160,6 +161,42 @@ public class AgentBuilderDefaultApplicationTest {
         } finally {
             ByteBuddyAgent.getInstrumentation().removeTransformer(classFileTransformer);
         }
+    }
+
+    @Test
+    public void testFoo() throws Exception {
+        ByteBuddyAgent.install();
+        System.out.println(HttpURLConnection.class);
+        new AgentBuilder.Default()
+                .type(named("sun.net.www.protocol.http.HttpURLConnection"))
+                .transform(new AgentBuilder.Transformer() {
+                    @Override
+                    public DynamicType.Builder<?> transform(DynamicType.Builder<?> builder, TypeDescription typeDescription) {
+                        return builder;
+                    }
+                }).withRedefinitionStrategy(AgentBuilder.RedefinitionStrategy.REDEFINITION)
+                .withListener(new AgentBuilder.Listener() {
+                    @Override
+                    public void onTransformation(TypeDescription typeDescription, DynamicType dynamicType) {
+                        System.out.println("Transforming: " + typeDescription);
+                    }
+
+                    @Override
+                    public void onIgnored(TypeDescription typeDescription) {
+
+                    }
+
+                    @Override
+                    public void onError(String typeName, Throwable throwable) {
+                        throwable.printStackTrace();
+                    }
+
+                    @Override
+                    public void onComplete(String typeName) {
+
+                    }
+                })
+                .installOnByteBuddyAgent();
     }
 
     @Retention(RetentionPolicy.RUNTIME)

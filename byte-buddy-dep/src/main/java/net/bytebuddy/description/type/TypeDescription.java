@@ -431,10 +431,6 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
         @Override
         public String getGenericSignature() {
             try {
-                GenericTypeDescription superType = getSuperType();
-                if (superType == null) {
-                    return NON_GENERIC_SIGNATURE;
-                }
                 SignatureWriter signatureWriter = new SignatureWriter();
                 boolean generic = false;
                 for (GenericTypeDescription typeVariable : getTypeVariables()) {
@@ -445,6 +441,11 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
                                 : signatureWriter.visitClassBound()));
                     }
                     generic = true;
+                }
+                GenericTypeDescription superType = getSuperType();
+                // The object type itself is non generic and implicitly returns a non-generic signature
+                if (superType == null) {
+                    superType = TypeDescription.OBJECT;
                 }
                 superType.accept(new GenericTypeDescription.Visitor.ForSignatureVisitor(signatureWriter.visitSuperclass()));
                 generic = generic || !superType.getSort().isNonGeneric();

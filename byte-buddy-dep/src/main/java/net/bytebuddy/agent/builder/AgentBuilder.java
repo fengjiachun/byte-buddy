@@ -7,7 +7,6 @@ import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.ClassFileLocator;
 import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassInjector;
-import net.bytebuddy.dynamic.loading.PackageDefinitionStrategy;
 import net.bytebuddy.dynamic.scaffold.InstrumentedType;
 import net.bytebuddy.dynamic.scaffold.inline.MethodRebaseResolver;
 import net.bytebuddy.implementation.Implementation;
@@ -172,7 +171,7 @@ public interface AgentBuilder {
      * @param initializationStrategy The initialization strategy to use.
      * @return A new instance of this agent builder that applies the given initialization strategy.
      */
-    AgentBuilder withInitialization(InitializationStrategy initializationStrategy);
+    AgentBuilder withInitializationStrategy(InitializationStrategy initializationStrategy);
 
     /**
      * Specifies a strategy for modifying existing types.
@@ -499,6 +498,7 @@ public interface AgentBuilder {
 
         /**
          * Creates a type pool for a given class file locator.
+         *
          * @param classFileLocator The class file locator to use.
          * @return A type pool for the supplied class file locator.
          */
@@ -1062,8 +1062,17 @@ public interface AgentBuilder {
         },
 
         /**
+         * <p>
          * Applies a <b>redefinition</b> to all classes that are already loaded and that would have been transformed if
          * the built agent was registered before they were loaded.
+         * </p>
+         * <p>
+         * <b>Important</b>: If a redefined class was previously instrumented, this instrumentation information is lost
+         * during the instrumentation. The redefinition is applied upon the original byte code that is provided by a class
+         * loader and not upon the code in its currently transformed format. Use
+         * {@link net.bytebuddy.agent.builder.AgentBuilder.RedefinitionStrategy#RETRANSFORMATION} if this is a factual or
+         * potential limitation.
+         * </p>
          */
         REDEFINITION {
             @Override
@@ -1139,8 +1148,9 @@ public interface AgentBuilder {
              * Considers a loaded class for modification.
              *
              * @param type The type that is to be considered.
+             * @return {@code true} if the class is considered to be redefined.
              */
-            void consider(Class<?> type);
+            boolean consider(Class<?> type);
 
             /**
              * Applies the represented type modification on all collected types.
@@ -1193,14 +1203,12 @@ public interface AgentBuilder {
                 }
 
                 @Override
-                public void consider(Class<?> type) {
+                public boolean consider(Class<?> type) {
                     Default.Transformation.Resolution resolution = transformation.resolve(new TypeDescription.ForLoadedType(type),
                             type.getClassLoader(),
                             type,
                             type.getProtectionDomain());
-                    if (resolution.isResolved()) {
-                        entries.add(new Entry(type, resolution));
-                    }
+                    return resolution.isResolved() && entries.add(new Entry(type, resolution));
                 }
 
                 @Override
@@ -1358,10 +1366,9 @@ public interface AgentBuilder {
                 }
 
                 @Override
-                public void consider(Class<?> type) {
-                    if (transformation.resolve(new TypeDescription.ForLoadedType(type), type.getClassLoader(), type, type.getProtectionDomain()).isResolved()) {
-                        types.add(type);
-                    }
+                public boolean consider(Class<?> type) {
+                    return transformation.resolve(new TypeDescription.ForLoadedType(type),
+                            type.getClassLoader(), type, type.getProtectionDomain()).isResolved() && types.add(type);
                 }
 
                 @Override
@@ -1656,7 +1663,7 @@ public interface AgentBuilder {
         }
 
         @Override
-        public AgentBuilder withInitialization(InitializationStrategy initializationStrategy) {
+        public AgentBuilder withInitializationStrategy(InitializationStrategy initializationStrategy) {
             return new Default(byteBuddy,
                     binaryLocator,
                     typeStrategy,
@@ -1720,8 +1727,28 @@ public interface AgentBuilder {
             if (redefinitionStrategy.isEnabled()) {
                 RedefinitionStrategy.Collector collector = redefinitionStrategy.makeCollector(transformation);
                 for (Class<?> type : instrumentation.getAllLoadedClasses()) {
-                    if (instrumentation.isModifiableClass(type)) {
-                        collector.consider(type);
+                    try {
+                        if (!instrumentation.isModifiableClass(type) || !collector.consider(type)) {
+                            try {
+                                try {
+                                    listener.onIgnored(new TypeDescription.ForLoadedType(type));
+                                } finally {
+                                    listener.onComplete(type.getName());
+                                }
+                            } catch (Throwable ignored) {
+                                // Ignore exceptions that are thrown by listeners to mimic the behavior of a transformation.
+                            }
+                        }
+                    } catch (Throwable throwable) {
+                        try {
+                            try {
+                                listener.onError(type.getName(), throwable);
+                            } finally {
+                                listener.onComplete(type.getName());
+                            }
+                        } catch (Throwable ignored) {
+                            // Ignore exceptions that are thrown by listeners to mimic the behavior of a transformation.
+                        }
                     }
                 }
                 try {
@@ -2276,10 +2303,10 @@ public interface AgentBuilder {
                         DynamicType.Unloaded<?> dynamicType = initializationStrategy.apply(transformer.transform(typeStrategy.builder(typeDescription,
                                 byteBuddy, classFileLocator, methodNameTransformer), typeDescription)).make();
                         Map<TypeDescription, LoadedTypeInitializer> loadedTypeInitializers = dynamicType.getLoadedTypeInitializers();
-                        if (!loadedTypeInitializers.isEmpty()) {
+                        if (loadedTypeInitializers.size() > 1) { // There exist auxiliary classes.
                             ClassInjector classInjector = classLoader == null
                                     ? bootstrapInjectionStrategy.make(protectionDomain)
-                                    : new ClassInjector.UsingReflection(classLoader, protectionDomain, accessControlContext, PackageDefinitionStrategy.NoOp.INSTANCE, true);
+                                    : new ClassInjector.UsingReflection(classLoader, protectionDomain, accessControlContext);
                             for (Map.Entry<TypeDescription, Class<?>> auxiliary : classInjector.inject(dynamicType.getRawAuxiliaryTypes()).entrySet()) {
                                 initializationStrategy.initialize(auxiliary.getValue(), loadedTypeInitializers.get(auxiliary.getKey()));
                             }
@@ -2699,8 +2726,8 @@ public interface AgentBuilder {
             }
 
             @Override
-            public AgentBuilder withInitialization(InitializationStrategy initializationStrategy) {
-                return materialize().withInitialization(initializationStrategy);
+            public AgentBuilder withInitializationStrategy(InitializationStrategy initializationStrategy) {
+                return materialize().withInitializationStrategy(initializationStrategy);
             }
 
             @Override
