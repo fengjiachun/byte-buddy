@@ -959,12 +959,23 @@ public interface TypePool {
 
         /**
          * Creates a default {@link net.bytebuddy.pool.TypePool} that looks up data by querying the system class
-         * loader.
+         * loader. The returned instance is configured to use a fast reading mode and a simple cache.
          *
          * @return A type pool that reads its data from the system class path.
          */
         public static TypePool ofClassPath() {
-            return new Default(new CacheProvider.Simple(), ClassFileLocator.ForClassLoader.ofClassPath(), ReaderMode.FAST);
+            return of(ClassFileLocator.ForClassLoader.ofClassPath());
+        }
+
+        /**
+         * Creates a default {@link net.bytebuddy.pool.TypePool} that looks up data by querying the supplied class
+         * file locator. The returned instance is configured to use a fast reading mode and a simple cache.
+         *
+         * @param classFileLocator The class file locator to use.
+         * @return A type pool that reads its data from the system class path.
+         */
+        public static TypePool of(ClassFileLocator classFileLocator) {
+            return new Default(new CacheProvider.Simple(), classFileLocator, ReaderMode.FAST);
         }
 
         @Override
@@ -1375,7 +1386,7 @@ public interface TypePool {
              */
             protected ParameterBag(Type[] parameterType) {
                 this.parameterType = parameterType;
-                parameterRegistry = new HashMap<Integer, String>(parameterType.length);
+                parameterRegistry = new HashMap<Integer, String>();
             }
 
             /**
@@ -2834,7 +2845,7 @@ public interface TypePool {
                     this.exceptionName = exceptionName;
                     annotationTokens = new LinkedList<LazyTypeDescription.AnnotationToken>();
                     Type[] parameterTypes = Type.getMethodType(descriptor).getArgumentTypes();
-                    parameterAnnotationTokens = new HashMap<Integer, List<LazyTypeDescription.AnnotationToken>>(parameterTypes.length);
+                    parameterAnnotationTokens = new HashMap<Integer, List<LazyTypeDescription.AnnotationToken>>();
                     for (int i = 0; i < parameterTypes.length; i++) {
                         parameterAnnotationTokens.put(i, new LinkedList<LazyTypeDescription.AnnotationToken>());
                     }
@@ -4082,7 +4093,9 @@ public interface TypePool {
 
                         @Override
                         public GenericTypeList resolveInterfaceTypes(List<String> interfaceTypeDescriptors, TypePool typePool, TypeDescription definingType) {
-                            return new TokenizedGenericType.TokenList(typePool, interfaceTypeTokens, interfaceTypeDescriptors, definingType);
+                            return interfaceTypeDescriptors.size() == interfaceTypeTokens.size()
+                                    ? new TokenizedGenericType.TokenList(typePool, interfaceTypeTokens, interfaceTypeDescriptors, definingType)
+                                    : Raw.INSTANCE.resolveInterfaceTypes(interfaceTypeDescriptors, typePool, definingType);
                         }
 
                         @Override
@@ -4204,15 +4217,17 @@ public interface TypePool {
 
                         @Override
                         public GenericTypeList resolveParameterTypes(List<String> parameterTypeDescriptors, TypePool typePool, MethodDescription definingMethod) {
-                            return new TokenizedGenericType.TokenList(typePool, parameterTypeTokens, parameterTypeDescriptors, definingMethod);
+                            return parameterTypeDescriptors.size() == parameterTypeTokens.size()
+                                    ? new TokenizedGenericType.TokenList(typePool, parameterTypeTokens, parameterTypeDescriptors, definingMethod)
+                                    : Raw.INSTANCE.resolveParameterTypes(parameterTypeDescriptors, typePool, definingMethod);
                         }
 
                         @Override
                         public GenericTypeList resolveExceptionTypes(List<String> exceptionTypeDescriptors, TypePool typePool, MethodDescription definingMethod) {
                             // Generic signatures of methods are optional.
-                            return exceptionTypeTokens.isEmpty()
-                                    ? new LazyTypeList(typePool, exceptionTypeDescriptors).asGenericTypes()
-                                    : new TokenizedGenericType.TokenList(typePool, exceptionTypeTokens, exceptionTypeDescriptors, definingMethod);
+                            return exceptionTypeDescriptors.size() == exceptionTypeTokens.size()
+                                    ? new TokenizedGenericType.TokenList(typePool, exceptionTypeTokens, exceptionTypeDescriptors, definingMethod)
+                                    : Raw.INSTANCE.resolveExceptionTypes(exceptionTypeDescriptors, typePool, definingMethod);
                         }
 
                         @Override

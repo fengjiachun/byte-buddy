@@ -124,7 +124,7 @@ public interface ClassInjector {
          * @param classLoader The {@link java.lang.ClassLoader} into which new class definitions are to be injected.
          */
         public UsingReflection(ClassLoader classLoader) {
-            this(classLoader, DEFAULT_PROTECTION_DOMAIN,  AccessController.getContext());
+            this(classLoader, DEFAULT_PROTECTION_DOMAIN, AccessController.getContext());
         }
 
         /**
@@ -170,7 +170,7 @@ public interface ClassInjector {
         @Override
         public Map<TypeDescription, Class<?>> inject(Map<? extends TypeDescription, byte[]> types) {
             synchronized (classLoader) {
-                Map<TypeDescription, Class<?>> loadedTypes = new HashMap<TypeDescription, Class<?>>(types.size());
+                Map<TypeDescription, Class<?>> loadedTypes = new HashMap<TypeDescription, Class<?>>();
                 for (Map.Entry<? extends TypeDescription, byte[]> entry : types.entrySet()) {
                     String typeName = entry.getKey().getName();
                     Dispatcher dispatcher = DISPATCHER.initialize(accessControlContext);
@@ -601,7 +601,7 @@ public interface ClassInjector {
                     jarOutputStream.close();
                 }
                 target.inject(instrumentation, new JarFile(jarFile));
-                Map<TypeDescription, Class<?>> loaded = new HashMap<TypeDescription, Class<?>>(types.size());
+                Map<TypeDescription, Class<?>> loaded = new HashMap<TypeDescription, Class<?>>();
                 ClassLoader classLoader = ClassLoader.getSystemClassLoader();
                 for (TypeDescription typeDescription : types.keySet()) {
                     loaded.put(typeDescription, classLoader.loadClass(typeDescription.getName()));

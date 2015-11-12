@@ -16,7 +16,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.MethodRule;
-import sun.net.www.protocol.http.HttpURLConnection;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -164,39 +163,20 @@ public class AgentBuilderDefaultApplicationTest {
     }
 
     @Test
-    public void testFoo() throws Exception {
-        ByteBuddyAgent.install();
-        System.out.println(HttpURLConnection.class);
-        new AgentBuilder.Default()
-                .type(named("sun.net.www.protocol.http.HttpURLConnection"))
-                .transform(new AgentBuilder.Transformer() {
-                    @Override
-                    public DynamicType.Builder<?> transform(DynamicType.Builder<?> builder, TypeDescription typeDescription) {
-                        return builder;
-                    }
-                }).withRedefinitionStrategy(AgentBuilder.RedefinitionStrategy.REDEFINITION)
-                .withListener(new AgentBuilder.Listener() {
-                    @Override
-                    public void onTransformation(TypeDescription typeDescription, DynamicType dynamicType) {
-                        System.out.println("Transforming: " + typeDescription);
-                    }
-
-                    @Override
-                    public void onIgnored(TypeDescription typeDescription) {
-
-                    }
-
-                    @Override
-                    public void onError(String typeName, Throwable throwable) {
-                        throwable.printStackTrace();
-                    }
-
-                    @Override
-                    public void onComplete(String typeName) {
-
-                    }
-                })
-                .installOnByteBuddyAgent();
+    @AgentAttachmentRule.Enforce
+    public void testChainedAgent() throws Exception {
+        assertThat(ByteBuddyAgent.install(), instanceOf(Instrumentation.class));
+        AgentBuilder agentBuilder = new AgentBuilder.Default()
+                .type(isAnnotatedWith(ShouldRebase.class), ElementMatchers.is(classLoader)).transform(new QuxTransformer());
+        ClassFileTransformer firstTransformer = agentBuilder.installOnByteBuddyAgent();
+        ClassFileTransformer secondTransformer = agentBuilder.installOnByteBuddyAgent();
+        try {
+            Class<?> type = classLoader.loadClass(Qux.class.getName());
+            assertThat(type.getDeclaredMethod(FOO).invoke(type.newInstance()), is((Object) (FOO + BAR + BAR)));
+        } finally {
+            ByteBuddyAgent.getInstrumentation().removeTransformer(firstTransformer);
+            ByteBuddyAgent.getInstrumentation().removeTransformer(secondTransformer);
+        }
     }
 
     @Retention(RetentionPolicy.RUNTIME)

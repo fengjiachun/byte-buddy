@@ -503,7 +503,7 @@ public interface MethodGraph {
                 Key.Store<?> rootStore = doAnalyze(typeRepresentation, snapshots, isVirtual().and(isVisibleTo(viewPoint)));
                 GenericTypeDescription superType = typeRepresentation.getSuperType();
                 List<GenericTypeDescription> interfaceTypes = typeRepresentation.getInterfaces();
-                Map<TypeDescription, MethodGraph> interfaceGraphs = new HashMap<TypeDescription, MethodGraph>(interfaceTypes.size());
+                Map<TypeDescription, MethodGraph> interfaceGraphs = new HashMap<TypeDescription, MethodGraph>();
                 for (GenericTypeDescription interfaceType : interfaceTypes) {
                     interfaceGraphs.put(interfaceType.asErasure(), snapshots.get(interfaceType).asGraph(merger));
                 }
@@ -1057,7 +1057,9 @@ public interface MethodGraph {
                             TypeDescription leftType = leftMethod.getDeclaringType().asErasure();
                             for (MethodDescription rightMethod : rightMethods) {
                                 TypeDescription rightType = rightMethod.getDeclaringType().asErasure();
-                                if (leftType.isAssignableTo(rightType)) {
+                                if (leftType.equals(rightType)) {
+                                    break;
+                                } else if (leftType.isAssignableTo(rightType)) {
                                     combined.remove(rightMethod);
                                     break;
                                 } else if (leftType.isAssignableFrom(rightType)) {
@@ -1157,7 +1159,7 @@ public interface MethodGraph {
                      * @return The method graph that represents this key store.
                      */
                     protected MethodGraph asGraph(Merger merger) {
-                        LinkedHashMap<Key<MethodDescription.TypeToken>, Node> entries = new LinkedHashMap<Key<MethodDescription.TypeToken>, Node>(this.entries.size());
+                        LinkedHashMap<Key<MethodDescription.TypeToken>, Node> entries = new LinkedHashMap<Key<MethodDescription.TypeToken>, Node>();
                         for (Entry<V> entry : this.entries.values()) {
                             Node node = entry.asNode(merger);
                             entries.put(entry.getKey().detach(node.getRepresentative().asTypeToken()), node);
@@ -1771,7 +1773,7 @@ public interface MethodGraph {
          * @return A method graph that represents all of the provided methods as simple nodes.
          */
         public static MethodGraph of(List<? extends MethodDescription> methodDescriptions) {
-            LinkedHashMap<MethodDescription.Token, Node> nodes = new LinkedHashMap<MethodDescription.Token, Node>(methodDescriptions.size());
+            LinkedHashMap<MethodDescription.Token, Node> nodes = new LinkedHashMap<MethodDescription.Token, Node>();
             for (MethodDescription methodDescription : methodDescriptions) {
                 nodes.put(methodDescription.asToken(), new Node.Simple(methodDescription));
             }

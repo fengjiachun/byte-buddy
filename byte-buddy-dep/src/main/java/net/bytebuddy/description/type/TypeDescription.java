@@ -482,7 +482,7 @@ public interface TypeDescription extends TypeRepresentation, TypeVariableSource 
             if (getSuperType() == null) {
                 return declaredAnnotations;
             } else {
-                Set<TypeDescription> annotationTypes = new HashSet<TypeDescription>(declaredAnnotations.size());
+                Set<TypeDescription> annotationTypes = new HashSet<TypeDescription>();
                 for (AnnotationDescription annotationDescription : declaredAnnotations) {
                     annotationTypes.add(annotationDescription.getAnnotationType());
                 }
