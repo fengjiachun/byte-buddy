@@ -2308,6 +2308,11 @@ public interface TypePool {
             private LazyTypeDescription.DeclarationContext declarationContext;
 
             /**
+             * A list of descriptors representing the types that are declared by the parsed type.
+             */
+            private final List<String> declaredTypes;
+
+            /**
              * Creates a new type extractor.
              */
             protected TypeExtractor() {
@@ -2317,6 +2322,7 @@ public interface TypePool {
                 methodTokens = new LinkedList<LazyTypeDescription.MethodToken>();
                 anonymousType = false;
                 declarationContext = LazyTypeDescription.DeclarationContext.SelfDeclared.INSTANCE;
+                declaredTypes = new LinkedList<String>();
             }
 
             @Override
@@ -2354,6 +2360,8 @@ public interface TypePool {
                     if (outerName != null && declarationContext.isSelfDeclared()) {
                         declarationContext = new LazyTypeDescription.DeclarationContext.DeclaredInType(outerName);
                     }
+                } else if (outerName != null && innerName != null && internalName.equals(this.internalName + "$" + innerName)) {
+                    declaredTypes.add("L" + internalName + ";");
                 }
             }
 
@@ -2389,6 +2397,7 @@ public interface TypePool {
                         interfaceName,
                         GenericTypeExtractor.ForSignature.OfType.extract(genericSignature),
                         declarationContext,
+                        declaredTypes,
                         anonymousType,
                         annotationTokens,
                         fieldTokens,
@@ -3090,6 +3099,87 @@ public interface TypePool {
     }
 
     /**
+     * A class file locator that loads classes and describes the loaded classes as a {@link net.bytebuddy.description.type.TypeDescription.ForLoadedType}
+     * if a type cannot be located as its class file.
+     */
+    class ClassLoading extends Default {
+
+        /**
+         * The class loader to query.
+         */
+        private final ClassLoader classLoader;
+
+        /**
+         * Creates a class loading type pool.
+         *
+         * @param cacheProvider    The cache provider to be used.
+         * @param classFileLocator The class file locator to be used.
+         * @param classLoader      The class loader to query.
+         */
+        public ClassLoading(CacheProvider cacheProvider, ClassFileLocator classFileLocator, ClassLoader classLoader) {
+            super(cacheProvider, classFileLocator, ReaderMode.FAST);
+            this.classLoader = classLoader;
+        }
+
+        /**
+         * Returns a class loading type pool that does not attempt to parse a class file but immediatly falls back to loading one.
+         *
+         * @param classLoader The class loader to query.
+         * @return An appropriate type pool.
+         */
+        public static TypePool of(ClassLoader classLoader) {
+            return of(ClassFileLocator.NoOp.INSTANCE, classLoader);
+        }
+
+        /**
+         * Returns a class loading type pool that uses a simple cache.
+         *
+         * @param classFileLocator The class file locator to be used.
+         * @param classLoader      The class loader to query.
+         * @return An appropriate type pool.
+         */
+        public static TypePool of(ClassFileLocator classFileLocator, ClassLoader classLoader) {
+            return new ClassLoading(new CacheProvider.Simple(), classFileLocator, classLoader);
+        }
+
+        @Override
+        public Resolution doDescribe(String name) {
+            Resolution resolution = super.doDescribe(name);
+            if (resolution.isResolved()) {
+                return resolution;
+            }
+            try {
+                return new Resolution.Simple(new TypeDescription.ForLoadedType(Class.forName(name, false, classLoader)));
+            } catch (ClassNotFoundException ignored) {
+                return new Resolution.Illegal(name);
+            }
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) return true;
+            if (other == null || getClass() != other.getClass()) return false;
+            if (!super.equals(other)) return false;
+            ClassLoading that = (ClassLoading) other;
+            return !(classLoader != null ? !classLoader.equals(that.classLoader) : that.classLoader != null);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = super.hashCode();
+            result = 31 * result + (classLoader != null ? classLoader.hashCode() : 0);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "TypePool.ClassLoading{" +
+                    "classLoader=" + classLoader +
+                    '}';
+        }
+    }
+
+    /**
      * A lazy facade of a type pool that delegates any lookups to another type pool only if another value than the type's name is looked up.
      */
     class LazyFacade extends AbstractBase {
@@ -3267,6 +3357,11 @@ public interface TypePool {
                 }
 
                 @Override
+                public TypeList getDeclaredTypes() {
+                    return resolve().getDeclaredTypes();
+                }
+
+                @Override
                 public boolean isAnonymousClass() {
                     return resolve().isAnonymousClass();
                 }
@@ -3356,6 +3451,11 @@ public interface TypePool {
         private final DeclarationContext declarationContext;
 
         /**
+         * A list of descriptors representing the types that are declared by this type.
+         */
+        private final List<String> declaredTypes;
+
+        /**
          * {@code true} if this type is an anonymous type.
          */
         private final boolean anonymousType;
@@ -3385,6 +3485,7 @@ public interface TypePool {
          * @param interfaceInternalName An array of this type's interfaces or {@code null} if this type does not define any interfaces.
          * @param signatureResolution   The resolution of this type's generic types.
          * @param declarationContext    The declaration context of this type.
+         * @param declaredTypes         A list of descriptors representing the types that are declared by this type.
          * @param anonymousType         {@code true} if this type is an anonymous type.
          * @param annotationTokens      A list of tokens describing the annotation's of this type.
          * @param fieldTokens           A list of field tokens describing the field's of this type.
@@ -3397,6 +3498,7 @@ public interface TypePool {
                                       String[] interfaceInternalName,
                                       GenericTypeToken.Resolution.ForType signatureResolution,
                                       DeclarationContext declarationContext,
+                                      List<String> declaredTypes,
                                       boolean anonymousType,
                                       List<AnnotationToken> annotationTokens,
                                       List<FieldToken> fieldTokens,
@@ -3417,6 +3519,7 @@ public interface TypePool {
                 }
             }
             this.declarationContext = declarationContext;
+            this.declaredTypes = declaredTypes;
             this.anonymousType = anonymousType;
             declaredAnnotations = new ArrayList<AnnotationDescription>(annotationTokens.size());
             for (AnnotationToken annotationToken : annotationTokens) {
@@ -3452,6 +3555,11 @@ public interface TypePool {
         @Override
         public TypeDescription getEnclosingType() {
             return declarationContext.getEnclosingType(typePool);
+        }
+
+        @Override
+        public TypeList getDeclaredTypes() {
+            return new LazyTypeList(typePool, declaredTypes);
         }
 
         @Override

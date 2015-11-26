@@ -67,7 +67,7 @@ public class Forwarding implements Implementation {
      * @return A corresponding implementation.
      */
     public static Implementation to(Object delegate) {
-        return to(delegate, String.format("%s$%d", FIELD_PREFIX, delegate.hashCode()));
+        return to(delegate, String.format("%s$%d", FIELD_PREFIX, Math.abs(delegate.hashCode() % Integer.MAX_VALUE)));
     }
 
     /**

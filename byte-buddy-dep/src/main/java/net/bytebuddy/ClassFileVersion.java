@@ -9,6 +9,11 @@ import org.objectweb.asm.Opcodes;
 public class ClassFileVersion implements Comparable<ClassFileVersion> {
 
     /**
+     * Returns the minimal version number that is legal.
+     */
+    protected static final int BASE_VERSION = 44;
+
+    /**
      * The class file version of Java 1.
      */
     public static final ClassFileVersion JAVA_V1 = new ClassFileVersion(Opcodes.V1_1);
@@ -78,11 +83,12 @@ public class ClassFileVersion implements Comparable<ClassFileVersion> {
      * @param versionNumber The minor-major release number.
      * @return A representation of the version number.
      */
-    public static ClassFileVersion of(int versionNumber) {
-        if (versionNumber < 1) {
+    public static ClassFileVersion ofMinorMajor(int versionNumber) {
+        ClassFileVersion classFileVersion = new ClassFileVersion(versionNumber);
+        if (classFileVersion.getMajorVersion() <= BASE_VERSION) {
             throw new IllegalArgumentException("Class version " + versionNumber + " is not valid");
         }
-        return new ClassFileVersion(versionNumber);
+        return classFileVersion;
     }
 
     /**
@@ -92,7 +98,7 @@ public class ClassFileVersion implements Comparable<ClassFileVersion> {
      * @param javaVersion The Java version.
      * @return A wrapper for the given Java class file version.
      */
-    public static ClassFileVersion forKnownJavaVersion(int javaVersion) {
+    public static ClassFileVersion ofJavaVersion(int javaVersion) {
         switch (javaVersion) {
             case 1:
                 return JAVA_V1;
@@ -132,7 +138,7 @@ public class ClassFileVersion implements Comparable<ClassFileVersion> {
                 throw new IllegalStateException("This JVM's version string does not seem to be valid: " + versionString);
             }
         }
-        return ClassFileVersion.forKnownJavaVersion(Integer.parseInt(versionString.substring(versionIndex[1] + 1, versionIndex[2])));
+        return ClassFileVersion.ofJavaVersion(Integer.parseInt(versionString.substring(versionIndex[1] + 1, versionIndex[2])));
     }
 
     /**
@@ -140,7 +146,7 @@ public class ClassFileVersion implements Comparable<ClassFileVersion> {
      *
      * @return The minor-major release number of this class file version.
      */
-    public int getVersion() {
+    public int getMinorMajorVersion() {
         return versionNumber;
     }
 
@@ -163,21 +169,22 @@ public class ClassFileVersion implements Comparable<ClassFileVersion> {
     }
 
     /**
-     * Checks if this class file version supports interface default methods and type annotations. (Java 8+)
+     * Returns the Java runtime version number of this class file version.
      *
-     * @return {@code true} if this class file version supports interface default methods and type annotations.
+     * @return The Java runtime version.
      */
-    public boolean isAtLeastJava8() {
-        return compareTo(ClassFileVersion.JAVA_V8) > -1;
+    public int getJavaVersion() {
+        return getMajorVersion() - BASE_VERSION;
     }
 
     /**
-     * Checks if this class file version supports generic types and annotation types. (Java 5+)
+     * Checks if this class file version is at least of the provided version.
      *
-     * @return {@code true} if this class file version supports generic types and annotation types.
+     * @param classFileVersion The version to check against.
+     * @return {@code true} if this version is at least of the given version.
      */
-    public boolean isAtLeastJava5() {
-        return compareTo(ClassFileVersion.JAVA_V5) > -1;
+    public boolean isAtLeast(ClassFileVersion classFileVersion) {
+        return compareTo(classFileVersion) > -1;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package net.bytebuddy.dynamic.scaffold;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.asm.ClassVisitorWrapper;
 import net.bytebuddy.description.annotation.AnnotationList;
@@ -1557,20 +1558,20 @@ public interface TypeWriter<T> {
 
             @Override
             public void visit(int version, int modifiers, String name, String signature, String superName, String[] interfaces) {
-                ClassFileVersion classFileVersion = ClassFileVersion.of(version);
+                ClassFileVersion classFileVersion = ClassFileVersion.ofMinorMajor(version);
                 List<Constraint> constraints = new LinkedList<Constraint>();
                 constraints.add(new Constraint.ForClassFileVersion(classFileVersion));
                 if (name.endsWith('/' + PackageDescription.PACKAGE_CLASS_NAME)) {
                     constraints.add(Constraint.ForPackageType.INSTANCE);
                 } else if ((modifiers & Opcodes.ACC_ANNOTATION) != 0) {
-                    if (!classFileVersion.isAtLeastJava5()) {
+                    if (!classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
                         throw new IllegalStateException("Cannot define an annotation type for class file version " + classFileVersion);
                     }
-                    constraints.add(classFileVersion.isAtLeastJava8()
+                    constraints.add(classFileVersion.isAtLeast(ClassFileVersion.JAVA_V8)
                             ? Constraint.ForAnnotation.JAVA_8
                             : Constraint.ForAnnotation.CLASSIC);
                 } else if ((modifiers & Opcodes.ACC_INTERFACE) != 0) {
-                    constraints.add(classFileVersion.isAtLeastJava8()
+                    constraints.add(classFileVersion.isAtLeast(ClassFileVersion.JAVA_V8)
                             ? Constraint.ForInterface.JAVA_8
                             : Constraint.ForInterface.CLASSIC);
                 } else if ((modifiers & Opcodes.ACC_ABSTRACT) != 0) {
@@ -1683,6 +1684,21 @@ public interface TypeWriter<T> {
                 void assertType(int modifier, boolean definesInterfaces, boolean isGeneric);
 
                 /**
+                 * Asserts the capability to store a type constant in the class's constant pool.
+                 */
+                void assertTypeInConstantPool();
+
+                /**
+                 * Asserts the capability to store a method type constant in the class's constant pool.
+                 */
+                void assertMethodTypeInConstantPool();
+
+                /**
+                 * Asserts the capability to store a method handle in the class's constant pool.
+                 */
+                void assertHandleInConstantPool();
+
+                /**
                  * Represents the constraint of a class type.
                  */
                 enum ForClass implements Constraint {
@@ -1750,6 +1766,21 @@ public interface TypeWriter<T> {
                     }
 
                     @Override
+                    public void assertTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertMethodTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertHandleInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
                     public String toString() {
                         return "TypeWriter.Default.ValidatingClassVisitor.Constraint.ForClass." + name();
                     }
@@ -1794,6 +1825,21 @@ public interface TypeWriter<T> {
                     @Override
                     public void assertDefaultValue(String name) {
                         /* do nothing, implicit by forbidding methods */
+                    }
+
+                    @Override
+                    public void assertTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertMethodTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertHandleInConstantPool() {
+                        /* do nothing */
                     }
 
                     @Override
@@ -1887,6 +1933,21 @@ public interface TypeWriter<T> {
                     }
 
                     @Override
+                    public void assertTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertMethodTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertHandleInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
                     public String toString() {
                         return "TypeWriter.Default.ValidatingClassVisitor.Constraint.ForInterface." + name();
                     }
@@ -1970,6 +2031,21 @@ public interface TypeWriter<T> {
                     }
 
                     @Override
+                    public void assertTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertMethodTypeInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
+                    public void assertHandleInConstantPool() {
+                        /* do nothing */
+                    }
+
+                    @Override
                     public String toString() {
                         return "TypeWriter.Default.ValidatingClassVisitor.Constraint.ForAnnotation." + name();
                     }
@@ -1996,16 +2072,16 @@ public interface TypeWriter<T> {
 
                     @Override
                     public void assertType(int modifiers, boolean definesInterfaces, boolean isGeneric) {
-                        if ((modifiers & Opcodes.ACC_ANNOTATION) != 0 && !classFileVersion.isAtLeastJava5()) {
+                        if ((modifiers & Opcodes.ACC_ANNOTATION) != 0 && !classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
                             throw new IllegalStateException("Cannot define annotation type for class file version " + classFileVersion);
-                        } else if (isGeneric && !classFileVersion.isAtLeastJava5()) {
+                        } else if (isGeneric && !classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
                             throw new IllegalStateException("Cannot define a generic type for class file version " + classFileVersion);
                         }
                     }
 
                     @Override
                     public void assertField(String name, boolean isPublic, boolean isStatic, boolean isGeneric) {
-                        if (isGeneric && !classFileVersion.isAtLeastJava5()) {
+                        if (isGeneric && !classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
                             throw new IllegalStateException("Cannot define generic method '" + name + "' for class file version " + classFileVersion);
                         }
                     }
@@ -2018,7 +2094,7 @@ public interface TypeWriter<T> {
                                              boolean isDefaultValueIncompatible,
                                              boolean isNonStaticNonVirtual,
                                              boolean isGeneric) {
-                        if (isGeneric && !classFileVersion.isAtLeastJava5()) {
+                        if (isGeneric && !classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
                             throw new IllegalStateException("Cannot define generic method '" + name + "' for class file version " + classFileVersion);
                         } else if ((isStatic || isNonStaticNonVirtual) && isAbstract) {
                             throw new IllegalStateException("Cannot define static or non-virtual method '" + name + "' to be abstract");
@@ -2027,14 +2103,14 @@ public interface TypeWriter<T> {
 
                     @Override
                     public void assertAnnotation() {
-                        if (!classFileVersion.isAtLeastJava5()) {
+                        if (!classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
                             throw new IllegalStateException("Cannot write annotations for class file version " + classFileVersion);
                         }
                     }
 
                     @Override
                     public void assertTypeAnnotation() {
-                        if (!classFileVersion.isAtLeastJava8()) {
+                        if (!classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
                             throw new IllegalStateException("Cannot write type annotations for class file version " + classFileVersion);
                         }
                     }
@@ -2042,6 +2118,27 @@ public interface TypeWriter<T> {
                     @Override
                     public void assertDefaultValue(String name) {
                         /* do nothing, implicitly checked by type assertion */
+                    }
+
+                    @Override
+                    public void assertTypeInConstantPool() {
+                        if (!classFileVersion.isAtLeast(ClassFileVersion.JAVA_V5)) {
+                            throw new IllegalStateException("Cannot write type to constant pool for class file version " + classFileVersion);
+                        }
+                    }
+
+                    @Override
+                    public void assertMethodTypeInConstantPool() {
+                        if (!classFileVersion.isAtLeast(ClassFileVersion.JAVA_V7)) {
+                            throw new IllegalStateException("Cannot write method type to constant pool for class file version " + classFileVersion);
+                        }
+                    }
+
+                    @Override
+                    public void assertHandleInConstantPool() {
+                        if (!classFileVersion.isAtLeast(ClassFileVersion.JAVA_V7)) {
+                            throw new IllegalStateException("Cannot write method handle to constant pool for class file version " + classFileVersion);
+                        }
                     }
 
                     @Override
@@ -2137,6 +2234,27 @@ public interface TypeWriter<T> {
                     }
 
                     @Override
+                    public void assertTypeInConstantPool() {
+                        for (Constraint constraint : constraints) {
+                            constraint.assertTypeInConstantPool();
+                        }
+                    }
+
+                    @Override
+                    public void assertMethodTypeInConstantPool() {
+                        for (Constraint constraint : constraints) {
+                            constraint.assertMethodTypeInConstantPool();
+                        }
+                    }
+
+                    @Override
+                    public void assertHandleInConstantPool() {
+                        for (Constraint constraint : constraints) {
+                            constraint.assertHandleInConstantPool();
+                        }
+                    }
+
+                    @Override
                     public boolean equals(Object other) {
                         return this == other || !(other == null || getClass() != other.getClass())
                                 && constraints.equals(((Compound) other).constraints);
@@ -2215,6 +2333,26 @@ public interface TypeWriter<T> {
                 public AnnotationVisitor visitAnnotationDefault() {
                     constraint.assertDefaultValue(name);
                     return super.visitAnnotationDefault();
+                }
+
+                @Override
+                @SuppressFBWarnings(value = "SF_SWITCH_NO_DEFAULT", justification = "Fall through to default case is intentional")
+                public void visitLdcInsn(Object constant) {
+                    if (constant instanceof Type) {
+                        Type type = (Type) constant;
+                        switch (type.getSort()) {
+                            case Type.OBJECT:
+                            case Type.ARRAY:
+                                constraint.assertTypeInConstantPool();
+                                break;
+                            case Type.METHOD:
+                                constraint.assertMethodTypeInConstantPool();
+                                break;
+                        }
+                    } else if (constant instanceof Handle) {
+                        constraint.assertHandleInConstantPool();
+                    }
+                    super.visitLdcInsn(constant);
                 }
 
                 @Override
@@ -2708,7 +2846,7 @@ public interface TypeWriter<T> {
                                     instrumentedType.getSuperType().asErasure()).getInternalName(),
                             instrumentedType.getInterfaces().asErasures().toInternalNames());
                     attributeAppender.apply(this, instrumentedType, targetType);
-                    if (!ClassFileVersion.of(classFileVersionNumber).isAtLeastJava8() && instrumentedType.isInterface()) {
+                    if (!ClassFileVersion.ofMinorMajor(classFileVersionNumber).isAtLeast(ClassFileVersion.JAVA_V8) && instrumentedType.isInterface()) {
                         implementationContext.prohibitTypeInitializer();
                     }
                 }
@@ -3031,7 +3169,7 @@ public interface TypeWriter<T> {
             public byte[] create(Implementation.Context.ExtractableView implementationContext) {
                 ClassWriter classWriter = new ClassWriter(classVisitorWrapper.mergeWriter(ASM_NO_FLAGS));
                 ClassVisitor classVisitor = classVisitorWrapper.wrap(new ValidatingClassVisitor(classWriter));
-                classVisitor.visit(classFileVersion.getVersion(),
+                classVisitor.visit(classFileVersion.getMinorMajorVersion(),
                         instrumentedType.getActualModifiers(!instrumentedType.isInterface()),
                         instrumentedType.getInternalName(),
                         instrumentedType.getGenericSignature(),

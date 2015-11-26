@@ -21,8 +21,7 @@
 
     <module name="TreeWalker">
 
-        <!-- Manual only. Checkstyle bug disallows @return in annotation methods: https://groups.google.com/forum/#!topic/checkstyle/VEVFDsZKLzg -->
-        <!--<module name="JavadocMethod"/>-->
+        <module name="JavadocMethod"/>
         <module name="JavadocType"/>
         <module name="JavadocVariable"/>
         <module name="JavadocStyle"/>
@@ -66,7 +65,6 @@
         <module name="EmptyStatement"/>
         <module name="EqualsHashCode"/>
         <module name="IllegalInstantiation"/>
-        <module name="MissingSwitchDefault"/>
         <module name="SimplifyBooleanExpression"/>
         <module name="SimplifyBooleanReturn"/>
 

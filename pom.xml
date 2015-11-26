@@ -171,6 +171,7 @@
                     <useReleaseProfile>false</useReleaseProfile>
                     <releaseProfiles>extras,gpg</releaseProfiles>
                     <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <tagNameFormat>byte-buddy-@{project.version}</tagNameFormat>
                 </configuration>
             </plugin>
             <!-- Enable mutation testing. -->
@@ -262,6 +263,9 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>${version.plugin.deploy}</version>
+                    <configuration>
+                        <updateReleaseInfo>true</updateReleaseInfo>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

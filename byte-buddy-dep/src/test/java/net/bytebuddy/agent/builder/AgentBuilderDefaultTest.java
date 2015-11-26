@@ -21,7 +21,9 @@ import java.lang.instrument.Instrumentation;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.ProtectionDomain;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -99,7 +101,7 @@ public class AgentBuilderDefaultTest {
         when(unloaded.getBytes()).thenReturn(BAZ);
         when(transformer.transform(builder, new TypeDescription.ForLoadedType(REDEFINED))).thenReturn((DynamicType.Builder) builder);
         when(binaryLocator.classFileLocator(REDEFINED.getClassLoader())).thenReturn(classFileLocator);
-        when(binaryLocator.typePool(any(ClassFileLocator.class))).thenReturn(typePool);
+        when(binaryLocator.typePool(any(ClassFileLocator.class), any(ClassLoader.class))).thenReturn(typePool);
         when(typePool.describe(REDEFINED.getName())).thenReturn(resolution);
         when(instrumentation.getAllLoadedClasses()).thenReturn(new Class<?>[]{REDEFINED});
         when(initializationStrategy.dispatcher()).thenReturn(dispatcher);
@@ -133,7 +135,7 @@ public class AgentBuilderDefaultTest {
         verify(dispatcher).apply(builder);
         verify(dispatcher).register(REDEFINED.getName(),
                 REDEFINED.getClassLoader(),
-                new AgentBuilder.InitializationStrategy.Dispatcher.InitializerConstructor.Simple(loadedTypeInitializer));
+                new AgentBuilder.InitializationStrategy.Dispatcher.LazyInitializer.Simple(loadedTypeInitializer));
         verifyNoMoreInteractions(dispatcher);
     }
 
@@ -162,7 +164,7 @@ public class AgentBuilderDefaultTest {
         verify(dispatcher).apply(builder);
         verify(dispatcher).register(REDEFINED.getName(),
                 REDEFINED.getClassLoader(),
-                new AgentBuilder.InitializationStrategy.Dispatcher.InitializerConstructor.Simple(loadedTypeInitializer));
+                new AgentBuilder.InitializationStrategy.Dispatcher.LazyInitializer.Simple(loadedTypeInitializer));
         verifyNoMoreInteractions(dispatcher);
     }
 
@@ -488,7 +490,7 @@ public class AgentBuilderDefaultTest {
         verify(dispatcher).apply(builder);
         verify(dispatcher).register(REDEFINED.getName(),
                 REDEFINED.getClassLoader(),
-                new AgentBuilder.InitializationStrategy.Dispatcher.InitializerConstructor.Simple(loadedTypeInitializer));
+                new AgentBuilder.InitializationStrategy.Dispatcher.LazyInitializer.Simple(loadedTypeInitializer));
         verifyNoMoreInteractions(dispatcher);
     }
 
@@ -722,13 +724,6 @@ public class AgentBuilderDefaultTest {
             @Override
             public AccessControlContext create() {
                 return new AccessControlContext(new ProtectionDomain[]{mock(ProtectionDomain.class)});
-            }
-        }).apply();
-        final Iterator<Class<?>> iterator = Arrays.<Class<?>>asList(Object.class, AgentBuilderDefaultTest.class).iterator();
-        ObjectPropertyAssertion.of(AgentBuilder.Default.InitializationStrategy.SelfInjection.Nexus.class).create(new ObjectPropertyAssertion.Creator<Class<?>>() {
-            @Override
-            public Class<?> create() {
-                return iterator.next();
             }
         }).apply();
     }

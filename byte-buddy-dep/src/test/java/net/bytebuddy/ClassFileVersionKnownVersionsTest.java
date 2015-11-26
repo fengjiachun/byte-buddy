@@ -26,6 +26,8 @@ public class ClassFileVersionKnownVersionsTest {
 
     private final boolean atLeastJava5;
 
+    private final boolean atLeastJava7;
+
     private final boolean atLeastJava8;
 
     public ClassFileVersionKnownVersionsTest(int javaVersion,
@@ -33,58 +35,71 @@ public class ClassFileVersionKnownVersionsTest {
                                              int majorVersion,
                                              int minorVersion,
                                              boolean atLeastJava5,
+                                             boolean atLeastJava7,
                                              boolean atLeastJava8) {
         this.javaVersion = javaVersion;
         this.minorMajorVersion = minorMajorVersion;
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
         this.atLeastJava5 = atLeastJava5;
+        this.atLeastJava7 = atLeastJava7;
         this.atLeastJava8 = atLeastJava8;
     }
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{
-                {1, Opcodes.V1_1, 45, 3, false, false},
-                {2, Opcodes.V1_2, 46, 0, false, false},
-                {3, Opcodes.V1_3, 47, 0, false, false},
-                {4, Opcodes.V1_4, 48, 0, false, false},
-                {5, Opcodes.V1_5, 49, 0, true, false},
-                {6, Opcodes.V1_6, 50, 0, true, false},
-                {7, Opcodes.V1_7, 51, 0, true, false},
-                {8, Opcodes.V1_8, 52, 0, true, true},
-                {9, Opcodes.V1_8, 52, 0, true, true}
+                {1, Opcodes.V1_1, 45, 3, false, false, false},
+                {2, Opcodes.V1_2, 46, 0, false, false, false},
+                {3, Opcodes.V1_3, 47, 0, false, false, false},
+                {4, Opcodes.V1_4, 48, 0, false, false, false},
+                {5, Opcodes.V1_5, 49, 0, true, false, false},
+                {6, Opcodes.V1_6, 50, 0, true, false, false},
+                {7, Opcodes.V1_7, 51, 0, true, true, false},
+                {8, Opcodes.V1_8, 52, 0, true, true, true},
+//                {9, Opcodes.V1_8, 52, 0, true, true}
         });
     }
 
     @Test
     public void testVersion() throws Exception {
-        assertThat(ClassFileVersion.forKnownJavaVersion(javaVersion).getVersion(), is(minorMajorVersion));
+        assertThat(ClassFileVersion.ofJavaVersion(javaVersion).getMinorMajorVersion(), is(minorMajorVersion));
     }
 
     @Test
     public void testMinorVersion() throws Exception {
-        assertThat(ClassFileVersion.forKnownJavaVersion(javaVersion).getMinorVersion(), is(minorVersion));
+        assertThat(ClassFileVersion.ofJavaVersion(javaVersion).getMinorVersion(), is(minorVersion));
     }
 
     @Test
     public void testMajorVersion() throws Exception {
-        assertThat(ClassFileVersion.forKnownJavaVersion(javaVersion).getMajorVersion(), is(majorVersion));
+        assertThat(ClassFileVersion.ofJavaVersion(javaVersion).getMajorVersion(), is(majorVersion));
     }
 
     @Test
     public void testAtLeastJava5() throws Exception {
-        assertThat(ClassFileVersion.forKnownJavaVersion(javaVersion).isAtLeastJava5(), is(atLeastJava5));
+        assertThat(ClassFileVersion.ofJavaVersion(javaVersion).isAtLeast(ClassFileVersion.JAVA_V5), is(atLeastJava5));
+    }
+
+    @Test
+    public void testAtLeastJava7() throws Exception {
+        assertThat(ClassFileVersion.ofJavaVersion(javaVersion).isAtLeast(ClassFileVersion.JAVA_V7), is(atLeastJava7));
     }
 
     @Test
     public void testAtLeastJava8() throws Exception {
-        assertThat(ClassFileVersion.forKnownJavaVersion(javaVersion).isAtLeastJava8(), is(atLeastJava8));
+        assertThat(ClassFileVersion.ofJavaVersion(javaVersion).isAtLeast(ClassFileVersion.JAVA_V8), is(atLeastJava8));
+    }
+
+    @Test
+    public void testJavaVersion() throws Exception {
+        assertThat(ClassFileVersion.ofJavaVersion(javaVersion).getJavaVersion(), is(javaVersion));
+
     }
 
     @Test
     public void testSimpleClassCreation() throws Exception {
-        ClassFileVersion classFileVersion = ClassFileVersion.forKnownJavaVersion(javaVersion);
+        ClassFileVersion classFileVersion = ClassFileVersion.ofJavaVersion(javaVersion);
         if (ClassFileVersion.forCurrentJavaVersion().compareTo(classFileVersion) >= 0) {
             Class<?> type = new ByteBuddy(classFileVersion)
                     .subclass(Object.class)
