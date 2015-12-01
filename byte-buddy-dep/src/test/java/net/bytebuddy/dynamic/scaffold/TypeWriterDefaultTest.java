@@ -24,6 +24,7 @@ import org.junit.rules.MethodRule;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.reflect.Modifier;
 import java.util.Collections;
 
 import static net.bytebuddy.matcher.ElementMatchers.isTypeInitializer;
@@ -348,6 +349,32 @@ public class TypeWriterDefaultTest {
         assertThat(dynamicType.getDeclaredMethod(FOO).invoke(dynamicType.newInstance()), is((Object) Object.class));
     }
 
+    @Test
+    public void testArrayTypeInLegacyConstantPoolRemapped() throws Exception {
+        Class<?> dynamicType = new ByteBuddy(ClassFileVersion.JAVA_V4)
+                .withClassVisitor(TypeConstantAdjustment.INSTANCE)
+                .subclass(Object.class)
+                .defineMethod(FOO, Object.class, Collections.<Class<?>>emptyList(), Visibility.PUBLIC)
+                .intercept(FixedValue.value(Object[].class))
+                .make()
+                .load(null, ClassLoadingStrategy.Default.WRAPPER)
+                .getLoaded();
+        assertThat(dynamicType.getDeclaredMethod(FOO).invoke(dynamicType.newInstance()), is((Object) Object[].class));
+    }
+
+    @Test
+    public void testPrimitiveTypeInLegacyConstantPoolRemapped() throws Exception {
+        Class<?> dynamicType = new ByteBuddy(ClassFileVersion.JAVA_V4)
+                .withClassVisitor(TypeConstantAdjustment.INSTANCE)
+                .subclass(Object.class)
+                .defineMethod(FOO, Object.class, Collections.<Class<?>>emptyList(), Visibility.PUBLIC)
+                .intercept(FixedValue.value(int.class))
+                .make()
+                .load(null, ClassLoadingStrategy.Default.WRAPPER)
+                .getLoaded();
+        assertThat(dynamicType.getDeclaredMethod(FOO).invoke(dynamicType.newInstance()), is((Object) int.class));
+    }
+
     @Test(expected = IllegalStateException.class)
     public void testMethodTypeInLegacyConstantPool() throws Exception {
         new ByteBuddy(ClassFileVersion.JAVA_V4)
@@ -364,6 +391,17 @@ public class TypeWriterDefaultTest {
                 .defineMethod(FOO, Object.class, Collections.<Class<?>>emptyList())
                 .intercept(FixedValue.value(JavaInstance.MethodHandle.of(new MethodDescription.ForLoadedMethod(Object.class.getDeclaredMethod("toString")))))
                 .make();
+    }
+
+    @Test
+    public void testInnerClassChangeModifierTest() throws Exception {
+        assertThat(new ByteBuddy()
+                .redefine(Bar.class)
+                .modifiers(Visibility.PUBLIC)
+                .make()
+                .load(null, ClassLoadingStrategy.Default.WRAPPER)
+                .getLoaded()
+                .getModifiers(), is(Modifier.PUBLIC));
     }
 
     @Test
@@ -391,6 +429,10 @@ public class TypeWriterDefaultTest {
 
     @Retention(RetentionPolicy.RUNTIME)
     public @interface Foo {
+        /* empty */
+    }
+
+    class Bar {
         /* empty */
     }
 }

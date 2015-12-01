@@ -128,6 +128,11 @@ public class ByteBuddyAgent {
     private static final String INSTRUMENTATION_FIELD_NAME = "instrumentation";
 
     /**
+     * An indicator variable to express that no instrumentation is available.
+     */
+    private static final Instrumentation UNAVAILABLE = null;
+
+    /**
      * The agent provides only {@code static} utility methods and should not be instantiated.
      */
     private ByteBuddyAgent() {
@@ -181,12 +186,12 @@ public class ByteBuddyAgent {
         if (accessor.isAvailable()) {
             try {
                 doInstall(accessor);
-                return doGetInstrumentation();
             } catch (Exception exception) {
-                throw new IllegalStateException("Current JVM does not support attachment with " + attachmentProvider);
+                throw new IllegalStateException("Error during attachment using: " + attachmentProvider, exception);
             }
+            return getInstrumentation();
         } else {
-            throw new IllegalStateException("Attachment provider cannot connect on the current JVM: " + attachmentProvider);
+            throw new IllegalStateException("This JVM does not support attachment using: " + attachmentProvider);
         }
     }
 
@@ -227,7 +232,7 @@ public class ByteBuddyAgent {
     private static void saveAgentJar(File agentFile) throws Exception {
         InputStream inputStream = Installer.class.getResourceAsStream('/' + Installer.class.getName().replace('.', '/') + CLASS_FILE_EXTENSION);
         if (inputStream == null) {
-            throw new IllegalStateException("Cannot locate class file for Byte Buddy agent");
+            throw new IllegalStateException("Cannot locate class file for Byte Buddy installer");
         }
         try {
             Manifest manifest = new Manifest();
@@ -238,7 +243,7 @@ public class ByteBuddyAgent {
             manifest.getMainAttributes().put(new Attributes.Name(CAN_SET_NATIVE_METHOD_PREFIX), Boolean.TRUE.toString());
             JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(agentFile), manifest);
             try {
-                jarOutputStream.putNextEntry(new JarEntry('/' + Installer.class.getName().replace('.', '/') + CLASS_FILE_EXTENSION));
+                jarOutputStream.putNextEntry(new JarEntry(Installer.class.getName().replace('.', '/') + CLASS_FILE_EXTENSION));
                 byte[] buffer = new byte[BUFFER_SIZE];
                 int index;
                 while ((index = inputStream.read(buffer)) != END_OF_FILE) {
@@ -281,16 +286,15 @@ public class ByteBuddyAgent {
      *
      * @return The Byte Buddy agent's {@link java.lang.instrument.Instrumentation} instance.
      */
+    @SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "Legal state where reflection communicates errors by exception")
     private static Instrumentation doGetInstrumentation() {
         try {
             return (Instrumentation) ClassLoader.getSystemClassLoader()
                     .loadClass(Installer.class.getName())
                     .getDeclaredField(INSTRUMENTATION_FIELD_NAME)
                     .get(STATIC_MEMBER);
-        } catch (RuntimeException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new IllegalStateException("The Byte Buddy agent is not properly initialized", exception);
+        } catch (Exception ignored) {
+            return UNAVAILABLE;
         }
     }
 
